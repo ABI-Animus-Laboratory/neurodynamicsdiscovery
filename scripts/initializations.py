@@ -17,10 +17,10 @@ def initialize_weights(conns_e, conns_i, G_e, G_i):
         presyn_conn = e[0]
         postsyn_conns = e[1]
         for postsyn_conn in postsyn_conns:
-            nest.Connect(presyn_conn, postsyn_conn, syn_spec={'weight': nest.random.normal(mean=1 * G_e, std = 0.4 * G_e)})
+            nest.Connect(presyn_conn, postsyn_conn, syn_spec={'weight': G_e * nest.random.normal(mean=G_e, std = 0.4)})
     for i in conns_i:
         presyn_conn = i[0]
         postsyn_conns = i[1]
         for postsyn_conn in postsyn_conns:
-            nest.Connect(presyn_conn, postsyn_conn, syn_spec={'weight': nest.random.normal(mean= 1 * G_i, std = 0.4 * -G_i)})
+            nest.Connect(presyn_conn, postsyn_conn, syn_spec={'weight': G_i * nest.random.normal(mean=G_i, std = 0.4)})
     
