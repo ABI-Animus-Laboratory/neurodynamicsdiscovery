@@ -68,7 +68,7 @@ def initialize_connectivity_matrix_hardcoded():
         #Interneurons to Pyramidal
         matrix[i][0:206] = np.abs(np.random.normal(1, scale=0.4, size=206))
     #Medial Septum
-    for i in range(246, 276):
+    for i in range(266, 276):
         #Medial Septum to Interneurons
         matrix[i][246:266] = np.abs(np.random.normal(1, scale=0.4, size=20))
 
