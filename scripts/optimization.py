@@ -46,7 +46,7 @@ def initialize_connections_hardcoded(pyr, ec, ca3, inter, ms, weights):
     connect_weights(inter, pyr, inter_pyr_conns)
 
     ms_inter_conns = weights[266:276, 246:266]
-    connect_weights(ms, inter, inter_pyr_conns)
+    connect_weights(ms, inter, ms_inter_conns)
     
 def ssd_with_l1(m1, m2, lamb):
     '''
@@ -56,16 +56,10 @@ def ssd_with_l1(m1, m2, lamb):
     l1_penalty = np.sum(lamb * m1)
     return np.sum(squared_difference) + l1_penalty
 
-def optimization_problem(weights):
-     results = simulate(weights)
-     results = simulation_results_to_spike_trains(results)
-     cost_function = ssd_with_l1(results, experimental_data, lamb)
-     return cost_function
-
 def simulate(weights):
-    nest.resetKernel()
-    nest.SetKernelStatus('resolution', 0.1)
-    runtime = 6000
+    nest.ResetKernel()
+    nest.resolution = 1
+    runtime = 17988
     gamma_rate = 40
     theta_rate = 7
     G_e = 10
