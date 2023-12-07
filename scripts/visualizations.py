@@ -22,13 +22,10 @@ def plot_spikes_from_device(device, title='Spike timings'):
     plt.xlim(xmin=-8)
 
 def plot_matrix(matrix, cmap='cividis', colorbar=True):
-
     plt.figure(figsize=(7, 5))
     img = plt.imshow(matrix, cmap=cmap, aspect='auto')
-
     if colorbar:
         plt.colorbar(img)
-
     plt.xlabel('Column Index')
     plt.ylabel('Row Index')
     plt.show()

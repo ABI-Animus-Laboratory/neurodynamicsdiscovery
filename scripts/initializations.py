@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import nest
+from scripts import initializations, optimization
+from params import pyr_hcamp_deco2012, int_hcamp_deco2012
 
 #Initializes a group of neurons as well as their default parameters, returns the group
 #By default, sets initial membrane potential to a uniform distribution between reset and threshold voltages
@@ -13,18 +15,6 @@ def initialize_neuron_group(type, n=1, params={}, initial_vm = None):
     else:
         neurons.set({"V_m": initial_vm})
     return neurons
-
-def initialize_weights(conns_e, conns_i, G_e, G_i):
-    for e in conns_e:
-        presyn_conn = e[0]
-        postsyn_conns = e[1]
-        for postsyn_conn in postsyn_conns:
-            nest.Connect(presyn_conn, postsyn_conn, syn_spec={'weight': G_e * nest.random.normal(mean=1, std = 0.4)})
-    for i in conns_i:
-        presyn_conn = i[0]
-        postsyn_conns = i[1]
-        for postsyn_conn in postsyn_conns:
-            nest.Connect(presyn_conn, postsyn_conn, syn_spec={'weight': G_i * nest.random.normal(mean=1, std = 0.4)})
 
 def initialize_connectivity_matrix_hardcoded():
     '''
@@ -73,6 +63,7 @@ def initialize_connectivity_matrix_hardcoded():
         matrix[i][246:266] = np.abs(np.random.normal(1, scale=0.4, size=20))
 
     return matrix
+
 
 
     
