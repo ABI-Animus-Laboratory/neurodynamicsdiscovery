@@ -13,15 +13,9 @@ def simulation_results_to_spike_trains(results, runtime):
             spike_train[int(time) - 1] = 1.0
         spike_trains[i] = spike_train
     return spike_trains
-
+    
 def connect_weights(A, B, W, G, V):
-    for i, pre in enumerate(A):
-        weights = W[:, i]
-        nonzero_indices = np.where(weights != 0)[0]
-        weights = weights[nonzero_indices]
-        post = B[nonzero_indices]
-        pre_array = np.ones(len(nonzero_indices), dtype=int) * pre.get('global_id')
-        nest.Connect(pre_array, post, conn_spec='one_to_one', syn_spec={'weight': weights * G * V})
+    nest.Connect(A, B, 'all_to_all', syn_spec={'weight': np.transpose(W) * G * V})
         
 def set_connection_weights_s1(pyr, ec, ca3, inter, ms, weights, G_e, G_i, V_e, V_i):
     pyr_pyr_conns = weights[0:206, 0:206]
@@ -49,9 +43,9 @@ def ssd_with_l1(m1, m2, lamb, weights):
     '''
     Sum of squared differences with lasso regularization cost function between two same-shape 2d numpy arrays
     '''
-    squared_difference = 0.5 * (m1 - m2) ** 2
-    l1_penalty = np.sum(lamb * weights)
-    return np.sum(squared_difference) + l1_penalty
+    sum_squared_difference = np.sum(0.5 * (m1 - m2) ** 2)
+    l1_penalty = np.sum(lamb * np.abs(weights))
+    return sum_squared_difference + l1_penalty
 
 def simulate(weights, setup=1):
     nest.ResetKernel()

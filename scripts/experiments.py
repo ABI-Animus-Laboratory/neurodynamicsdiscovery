@@ -3,13 +3,9 @@ import nest
 from scripts import initializations, optimization
 from params import pyr_hcamp_deco2012, int_hcamp_deco2012
 
-def run_s1(weights):
+def run_s1(weights, G_e = 3.8, G_i = -1, runtime = 17988, gamma_rate = 40, theta_rate = 7):
+    nest.ResetKernel()
     nest.resolution = 1
-    runtime = 17988
-    gamma_rate = 40
-    theta_rate = 7
-    G_e = 5
-    G_i = -1
     V_e, V_i = 5, 5
     pyr = initializations.initialize_neuron_group('iaf_psc_alpha', 206, pyr_hcamp_deco2012.params)
     inter = initializations.initialize_neuron_group('iaf_psc_alpha', 20, int_hcamp_deco2012.params)
