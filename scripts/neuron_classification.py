@@ -64,9 +64,6 @@ def categorize_neurons_box(spikes_coords, x_min, x_max, y_min, y_max, place_fiel
             non_specific.append((index+1, neuron_spikes))
     return location_specific, non_specific
 
-
-        
-
 def assign_quadrant(row, x_mid, y_mid):
     if row['X'] < x_mid and row['Y'] < y_mid:
         return 'Top Left'
