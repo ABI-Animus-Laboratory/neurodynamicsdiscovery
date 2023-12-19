@@ -41,7 +41,7 @@ def get_centroid(coords, lower_percentile=None, upper_percentile=None):
     middle_percentile = middle_percentile.reshape(-1, 2)
     return np.average(middle_percentile, axis=0)
 
-def categorize_neurons_box(spikes_coords, x_min, x_max, y_min, y_max, place_field_percentage=0.75, acceptance_percentage=0.7):
+def categorize_neurons_box(spikes_coords, x_min, x_max, y_min, y_max, place_field_percentage=0.30, acceptance_percentage=0.90):
     #Categorizes neurons into interneurons, silent cells and place cells
     neuron_types = {'Interneuron':[], 'Silent':[], 'Place':[]}
     for i in range(len(spikes_coords)-1, -1, -1):
@@ -54,8 +54,8 @@ def categorize_neurons_box(spikes_coords, x_min, x_max, y_min, y_max, place_fiel
 
     open_w = x_max - x_min
     open_h = y_max - y_min
-    p_field_half_w = place_field_percentage * open_w * 0.5
-    p_field_half_h = place_field_percentage * open_h * 0.5
+    p_field_half_w = place_field_percentage * open_w * 2
+    p_field_half_h = place_field_percentage * open_h * 2
     for index, neuron_spikes in enumerate(spikes_coords):
         centroid = get_centroid(neuron_spikes)
         box_w_upper, box_w_lower = centroid[0] + p_field_half_w, centroid[0] - p_field_half_w
