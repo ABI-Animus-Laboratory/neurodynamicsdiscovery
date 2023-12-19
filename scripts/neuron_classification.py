@@ -41,10 +41,17 @@ def get_centroid(coords, lower_percentile=None, upper_percentile=None):
     middle_percentile = middle_percentile.reshape(-1, 2)
     return np.average(middle_percentile, axis=0)
 
-def categorize_neurons_box(spikes_coords, x_min, x_max, y_min, y_max, place_field_percentage=0.5, acceptance_percentage=0.5):
-    #Categorizes neurons into location-specific and non location-specific
-    location_specific = []
-    non_specific = []
+def categorize_neurons_box(spikes_coords, x_min, x_max, y_min, y_max, place_field_percentage=0.75, acceptance_percentage=0.7):
+    #Categorizes neurons into interneurons, silent cells and place cells
+    neuron_types = {'Interneuron':[], 'Silent':[], 'Place':[]}
+    for i in range(len(spikes_coords)-1, -1, -1):
+        if len(spikes_coords[i]) < 5:
+            coord = spikes_coords.pop(i)
+            neuron_types['Silent'].append([i, coord])
+        if len(spikes_coords[i]) > 275:
+            coord = spikes_coords.pop(i)
+            neuron_types['Interneuron'].append([i, coord])
+
     open_w = x_max - x_min
     open_h = y_max - y_min
     p_field_half_w = place_field_percentage * open_w * 0.5
@@ -59,19 +66,13 @@ def categorize_neurons_box(spikes_coords, x_min, x_max, y_min, y_max, place_fiel
             if x <= box_w_upper and x >= box_w_lower and y <= box_h_upper and y >= box_h_lower:
                 count += 1
         if count >= acceptance_percentage * len(neuron_spikes):
-            location_specific.append((index+1, neuron_spikes))
+            neuron_types['Place'].append([index, coord])
         else:
-            non_specific.append((index+1, neuron_spikes))
-    return location_specific, non_specific
+            if len(neuron_spikes) < 60:
+                neuron_types['Silent'].append([index, coord])
+            else:
+                neuron_types['Interneuron'].append([index, coord])
+    return neuron_types
 
-def assign_quadrant(row, x_mid, y_mid):
-    if row['X'] < x_mid and row['Y'] < y_mid:
-        return 'Top Left'
-    elif row['X'] > x_mid and row['Y'] < y_mid:
-        return 'Top Right'
-    elif row['X'] < x_mid and row['Y'] > y_mid:
-        return 'Bottom Left'
-    else:
-        return 'Bottom Right'
     
 
