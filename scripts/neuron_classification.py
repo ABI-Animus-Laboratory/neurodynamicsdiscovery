@@ -1,13 +1,6 @@
 import pandas as pd
 import numpy as np
 
-def remove_weak_neurons(spikes_array, threshold=5):
-    #Removes neurons from data that have total number of spikes under threshold
-    for i in range(np.size(spikes_array, axis=0)-1, -1, -1):
-        if np.sum(spikes_array[i]) <= threshold:
-            spikes_array = np.delete(spikes_array, i, axis=0) 
-    return spikes_array
-
 def match_frames(spikes_array, X_coords, Y_coords, num_frames):
     #Matches the number of frames in the x and y coordinates from EzTrack and the spikes data
     #Calcium imaging in 30fps and behavioural data in 15fps assumption
@@ -43,14 +36,14 @@ def get_centroid(coords, lower_percentile=None, upper_percentile=None):
 
 def categorize_neurons_box(spikes_coords, x_min, x_max, y_min, y_max, place_field_percentage=0.30, acceptance_percentage=0.90):
     #Categorizes neurons into interneurons, silent cells and place cells
-    neuron_types = {'Interneuron':[], 'Silent':[], 'Place':[]}
+    neuron_type_counts = {'Interneuron':[], 'Silent':[], 'Place':[]}
     for i in range(len(spikes_coords)-1, -1, -1):
         if len(spikes_coords[i]) < 5:
             coord = spikes_coords.pop(i)
-            neuron_types['Silent'].append([i, coord])
+            neuron_type_counts['Silent'].append([i, coord])
         if len(spikes_coords[i]) > 275:
             coord = spikes_coords.pop(i)
-            neuron_types['Interneuron'].append([i, coord])
+            neuron_type_counts['Interneuron'].append([i, coord])
 
     open_w = x_max - x_min
     open_h = y_max - y_min
@@ -66,13 +59,13 @@ def categorize_neurons_box(spikes_coords, x_min, x_max, y_min, y_max, place_fiel
             if x <= box_w_upper and x >= box_w_lower and y <= box_h_upper and y >= box_h_lower:
                 count += 1
         if count >= acceptance_percentage * len(neuron_spikes):
-            neuron_types['Place'].append([index, coord])
+            neuron_type_counts['Place'].append([index, coord])
         else:
             if len(neuron_spikes) < 60:
-                neuron_types['Silent'].append([index, coord])
+                neuron_type_counts['Silent'].append([index, coord])
             else:
-                neuron_types['Interneuron'].append([index, coord])
-    return neuron_types
+                neuron_type_counts['Interneuron'].append([index, coord])
+    return neuron_type_counts
 
     
 
