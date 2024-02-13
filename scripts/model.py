@@ -137,7 +137,6 @@ def tidy_Vms(Vms, num_neurons):
     Converts the Vms recorded from the simulation intoto a nested array of voltage traces for each neuron
     Takes in a 1d aray of voltages ([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3]), the number of neurons (integer), and outputs a 2d numpy array
     '''
-
     voltage_traces = []
     for i in range(0, num_neurons):
         voltage_trace = []
