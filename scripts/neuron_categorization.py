@@ -1,5 +1,7 @@
 import pandas as pd 
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import math
 
 class NeuronCategorizer:
@@ -22,8 +24,17 @@ class NeuronCategorizer:
         self.interneuron_cutoff = interneuron_cutoff
         self.separation_threshold = separation_threshold
 
+        self.ofield_x_min = self.eztrack_data['X'].min()
+        self.ofield_x_max = self.eztrack_data['X'].max()
+        self.ofield_y_min = self.eztrack_data['Y'].min()
+        self.ofield_y_max = self.eztrack_data['Y'].max()
+
+        self.ofield_w = self.ofield_x_max - self.ofield_x_min
+
         self.spike_coordinates = None
         self.categorized_neurons = None
+
+        self.categorized = False
 
     def get_spike_coordinates(self):
         '''
@@ -84,16 +95,12 @@ class NeuronCategorizer:
         Takes in nothing and returns None
         '''
 
-        categorized_neurons = {'Place':[], 'Silent':[], 'Interneuron':[]}
-
-        x_min, x_max = self.eztrack_data['X'].min(), self.eztrack_data['X'].max()
-
-        ofield_w = x_max - x_min
+        categorized_neurons = {'Place':{}, 'Silent':{}, 'Interneuron':{}}
 
         for neuron_id in self.spike_coordinates.keys():
             neuron_spike_coords = self.spike_coordinates[neuron_id]
-            label = self.get_neuron_categorization_square_box(neuron_spike_coords, ofield_w)
-            categorized_neurons[label].append({neuron_id: neuron_spike_coords})
+            label = self.get_neuron_categorization_square_box(neuron_spike_coords, self.ofield_w)
+            categorized_neurons[label][neuron_id] = neuron_spike_coords
         
         self.categorized_neurons = categorized_neurons
 
@@ -109,7 +116,7 @@ class NeuronCategorizer:
         if len(neuron_spike_coords) > self.interneuron_cutoff:
             return 'Interneuron'
 
-        box_radius = (math.sqrt(self.pf_area) * ofield_w) / 2
+        box_radius = (math.sqrt(self.pf_area) * self.ofield_w) / 2
         centroid = self.calculate_centroid(neuron_spike_coords)
 
         #The origin of the box is at the top left
@@ -136,6 +143,89 @@ class NeuronCategorizer:
 
         self.calculate_spike_coordinates()
         self.categorize_neurons()
+        self.categorized = True
+
+    def print_category_counts(self):
+
+        if self.categorized:
+            print('Number of place cells: ' + str(len(self.categorized_neurons['Place'].keys())))
+            print('Number of silent cells: ' + str(len(self.categorized_neurons['Silent'].keys())))
+            print('Number of interneurons: ' + str(len(self.categorized_neurons['Interneuron'].keys())))
+        else:
+            print('No neurons have been categorized yet!')
+
+    def plot_place_field_box(self, neuron_spike_coords, neuron_id = None):
+        
+        box_radius = math.sqrt(self.ofield_w ** 2 * self.pf_area) 
+
+        centroid = self.calculate_centroid(neuron_spike_coords)
+
+        box_top = (centroid[0] - self.ofield_x_min - box_radius) // 2
+        box_left = (centroid[1] - self.ofield_y_min - box_radius) // 2
+
+        heat_map = np.zeros((round(self.ofield_w // 2), round(self.ofield_w // 2)))
+
+        for coord in neuron_spike_coords:
+            x, y = round((coord[0] - self.ofield_x_min) // 2), round((coord[1] - self.ofield_y_min) // 2)
+            heat_map[x][y] += 1
+        
+        fig, ax = plt.subplots()
+        cax = ax.imshow(heat_map, 'hot', vmin=0, vmax=5)
+        box = Rectangle((box_left, box_top), box_radius, box_radius, linewidth=0.5, edgecolor='yellow', facecolor='none')
+        ax.add_patch(box)
+        if not neuron_id:
+            ax.set_title('Spike coordinates')
+        else:
+            ax.set_title('Spike coordinates for Neuron ' + neuron_id)
+        plt.colorbar(cax)
+        plt.show()
+
+    def save_place_fields_box(self):
+
+        box_radius = math.sqrt(self.ofield_w ** 2 * self.pf_area) 
+
+        for category in self.categorized_neurons.keys():
+            for neuron_id in self.categorized_neurons[category].keys():
+                neuron_spike_coords = self.categorized_neurons[category][neuron_id]
+
+                centroid = self.calculate_centroid(neuron_spike_coords)
+                box_top = (centroid[0] - self.ofield_x_min - box_radius) // 2
+                box_left = (centroid[1] - self.ofield_y_min - box_radius) // 2
+
+                heat_map = np.zeros((round(self.ofield_w // 2), round(self.ofield_w // 2)))
+
+                for coord in neuron_spike_coords:
+                    x, y = round((coord[0] - self.ofield_x_min) // 2), round((coord[1] - self.ofield_y_min) // 2)
+                    heat_map[x][y] += 1
+                
+                fig, ax = plt.subplots()
+                cax = ax.imshow(heat_map, 'hot', vmin=0, vmax=5)
+                box = Rectangle((box_left, box_top), box_radius, box_radius, linewidth=0.5, edgecolor='yellow', facecolor='none')
+                ax.add_patch(box)
+                if not neuron_id:
+                    ax.set_title('Spike coordinates')
+                else:
+                    ax.set_title('Spike coordinates for Neuron ' + neuron_id)
+                plt.colorbar(cax)
+                if category == 'Place':
+                    plt.savefig(f'/hpc/mzhu843/modelling/nest/results/place fields/place/Neuron {neuron_id}.png')
+                if category == 'Interneuron':
+                    plt.savefig(f'/hpc/mzhu843/modelling/nest/results/place fields/inter/Neuron {neuron_id}.png')
+                if category == "Silent":
+                    plt.savefig(f'/hpc/mzhu843/modelling/nest/results/place fields/silent/Neuron {neuron_id}.png')
+                plt.close(fig)               
+
+
+
+        
+
+
+        
+
+
+
+
+
     
     
 
