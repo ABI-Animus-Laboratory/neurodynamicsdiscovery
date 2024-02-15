@@ -10,7 +10,7 @@ class NeuronCategorizer:
     silent_cells = None
     interneurons = None
 
-    def __init__(self, spike_trains, eztrack_data, different_framerates = True, pf_area = 0.38, acceptance = 0.65, silent_cutoff = 8, interneuron_cutoff = 275,
+    def __init__(self, spike_trains, eztrack_data, different_framerates = True, pf_area = 0.40, acceptance = 0.65, silent_cutoff = 5, interneuron_cutoff = 275,
                  separation_threshold = 75):
         
         self.spike_trains = spike_trains
