@@ -10,7 +10,7 @@ class NeuronCategorizer:
     silent_cells = None
     interneurons = None
 
-    def __init__(self, spike_trains, eztrack_data, different_framerates = True, pf_area = 0.38, acceptance = 0.65, silent_cutoff = 5, interneuron_cutoff = 275,
+    def __init__(self, spike_trains, eztrack_data, different_framerates = True, pf_area = 0.38, acceptance = 0.65, silent_cutoff = 8, interneuron_cutoff = 275,
                  separation_threshold = 75):
         
         self.spike_trains = spike_trains
@@ -30,6 +30,7 @@ class NeuronCategorizer:
         self.ofield_y_max = self.eztrack_data['Y'].max()
 
         self.ofield_w = self.ofield_x_max - self.ofield_x_min
+        self.ofield_h = self.ofield_y_max - self.ofield_y_min
 
         self.spike_coordinates = None
         self.categorized_neurons = None
@@ -82,7 +83,6 @@ class NeuronCategorizer:
     def calculate_centroid(self, coords):
         '''
         Calculates the arithmetic mean coordinate for an array of coordinates
-        MIGHT BE INCORRECT NEED TO DOUBLE CHECK
         Returns a two-element tuple
         '''
 
@@ -108,7 +108,7 @@ class NeuronCategorizer:
 
         '''
         Checks whether a neuron is silent, interneuron or place cell using the square box method
-        Returns a string 
+        Returns a string indicating the neuron category
         '''
 
         if len(neuron_spike_coords) < self.silent_cutoff:
@@ -128,10 +128,9 @@ class NeuronCategorizer:
             x, y = coord[0], coord[1]
             if x <= box_left and x >= box_right and y >= box_top and y <= box_bottom:
                 count += 1
-        
         if count >= self.acceptance * len(neuron_spike_coords):
             return 'Place'
-        if count < self.separation_threshold:
+        if len(neuron_spike_coords) < self.separation_threshold:
             return 'Silent'
         return 'Interneuron'
 
@@ -147,6 +146,10 @@ class NeuronCategorizer:
 
     def print_category_counts(self):
 
+        '''
+        Prints the number of neurons in each category
+        '''
+
         if self.categorized:
             print('Number of place cells: ' + str(len(self.categorized_neurons['Place'].keys())))
             print('Number of silent cells: ' + str(len(self.categorized_neurons['Silent'].keys())))
@@ -155,15 +158,20 @@ class NeuronCategorizer:
             print('No neurons have been categorized yet!')
 
     def plot_place_field_box(self, neuron_spike_coords, neuron_id = None):
+
+        '''
+        Uses the array of spike coordinates for a single neuron to create a place field box plot 
+        Takes in neuron spike coordinates and returns nothing
+        '''
         
-        box_radius = math.sqrt(self.ofield_w ** 2 * self.pf_area) 
+        box_radius = math.sqrt(self.ofield_w * self.ofield_h * self.pf_area) / 2
 
         centroid = self.calculate_centroid(neuron_spike_coords)
 
         box_top = (centroid[0] - self.ofield_x_min - box_radius) // 2
         box_left = (centroid[1] - self.ofield_y_min - box_radius) // 2
 
-        heat_map = np.zeros((round(self.ofield_w // 2), round(self.ofield_w // 2)))
+        heat_map = np.zeros((round(self.ofield_w // 2)+1, round(self.ofield_h // 2)+1))
 
         for coord in neuron_spike_coords:
             x, y = round((coord[0] - self.ofield_x_min) // 2), round((coord[1] - self.ofield_y_min) // 2)
@@ -182,7 +190,12 @@ class NeuronCategorizer:
 
     def save_place_fields_box(self):
 
-        box_radius = math.sqrt(self.ofield_w ** 2 * self.pf_area) 
+        '''
+        Saves the place field box plots for all neurons
+        Takes in nothing and returns nothing
+        '''
+
+        box_radius = math.sqrt(self.ofield_w * self.ofield_h * self.pf_area) / 2
 
         for category in self.categorized_neurons.keys():
             for neuron_id in self.categorized_neurons[category].keys():
@@ -192,7 +205,7 @@ class NeuronCategorizer:
                 box_top = (centroid[0] - self.ofield_x_min - box_radius) // 2
                 box_left = (centroid[1] - self.ofield_y_min - box_radius) // 2
 
-                heat_map = np.zeros((round(self.ofield_w // 2), round(self.ofield_w // 2)))
+                heat_map = np.zeros((round(self.ofield_w // 2)+1, round(self.ofield_h // 2)+1))
 
                 for coord in neuron_spike_coords:
                     x, y = round((coord[0] - self.ofield_x_min) // 2), round((coord[1] - self.ofield_y_min) // 2)
@@ -208,11 +221,11 @@ class NeuronCategorizer:
                     ax.set_title('Spike coordinates for Neuron ' + neuron_id)
                 plt.colorbar(cax)
                 if category == 'Place':
-                    plt.savefig(f'/hpc/mzhu843/modelling/nest/results/place fields/place/Neuron {neuron_id}.png')
+                    plt.savefig(f'/hpc/mzhu843/modelling/nest/plots/place field box plots/place/Neuron {neuron_id}.png')
                 if category == 'Interneuron':
-                    plt.savefig(f'/hpc/mzhu843/modelling/nest/results/place fields/inter/Neuron {neuron_id}.png')
+                    plt.savefig(f'/hpc/mzhu843/modelling/nest/plots/place field box plots/inter/Neuron {neuron_id}.png')
                 if category == "Silent":
-                    plt.savefig(f'/hpc/mzhu843/modelling/nest/results/place fields/silent/Neuron {neuron_id}.png')
+                    plt.savefig(f'/hpc/mzhu843/modelling/nest/plots/place field box plots/silent/Neuron {neuron_id}.png')
                 plt.close(fig)               
 
 
