@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import nest
-from scripts import initializations, optimization
+from scripts import optimization
 from params import pyr_hcamp_deco2012, int_hcamp_deco2012
 
 class NeuronalNetwork:
@@ -57,7 +57,7 @@ class NeuronalNetwork:
         multimeter.set(record_from=["V_m"])
         nest.Connect(multimeter, pyr)
 
-        optimization.set_connection_weights_s1(pyr, ec_parrot, ca3_parrot, inter, ms_parrot, self.weights, self.G_e, self.G_i, self.V_e, self.V_i)
+        set_connection_weights_s1(pyr, ec_parrot, ca3_parrot, inter, ms_parrot, self.weights, self.G_e, self.G_i, self.V_e, self.V_i)
 
         nest.Simulate(self.runtime)
 
