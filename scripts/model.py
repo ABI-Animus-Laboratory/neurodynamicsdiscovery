@@ -8,7 +8,7 @@ class NeuronalNetwork:
     '''
     Class that represents the model
     '''
-    def __init__(self, weights, G_e = 3.8, G_i = -1, runtime = 17988, gamma_rate = 40, theta_rate = 7):
+    def __init__(self, weights, categorized_neurons, G_e = 3.8, G_i = -1, runtime = 17988, gamma_rate = 40, theta_rate = 7):
         self.weights = weights
         self.G_e = G_e
         self.G_i = G_i
@@ -21,11 +21,19 @@ class NeuronalNetwork:
         self.V_i = 5
         self.simulated = False
 
-        self.num_neurons = 206
+        self.num_pyr = len(categorized_neurons['Place'])
+        self.num_int = len(categorized_neurons['Interneuron'])
+        self.num_ca1_neurons = self.num_pyr + self.num_int
 
-        self.spike_trains = None
-        self.voltage_traces = None
-        self.spike_recorder = None
+        self.spike_trains_pyr = None
+        self.spike_trains_inter = None
+
+        self.voltage_traces_pyr = None
+        self.voltage_traces_inter = None
+
+        self.spike_recorder_pyr = None
+        self.spike_recorder_inter = None
+        
 
     def simulate(self):
         '''
@@ -33,8 +41,8 @@ class NeuronalNetwork:
         Takes in no inputs and has no output
         '''
         nest.ResetKernel()
-        pyr = initialize_neuron_group('iaf_psc_alpha', 206, pyr_hcamp_deco2012.params)
-        inter = initialize_neuron_group('iaf_psc_alpha', 20, int_hcamp_deco2012.params)
+        pyr = initialize_neuron_group('iaf_psc_alpha', self.num_pyr, pyr_hcamp_deco2012.params)
+        inter = initialize_neuron_group('iaf_psc_alpha', self.num_int, int_hcamp_deco2012.params)
         ec_input = nest.Create('poisson_generator')
         ec_input.set(rate=self.gamma_rate)
         ec_parrot = nest.Create('parrot_neuron', n=20)
@@ -50,34 +58,56 @@ class NeuronalNetwork:
         ms_parrot = nest.Create('parrot_neuron', n=10)
         nest.Connect(ms_input, ms_parrot)
 
-        spike_recorder = nest.Create('spike_recorder')
-        nest.Connect(pyr, spike_recorder)
+        spike_recorder_pyr = nest.Create('spike_recorder')
+        nest.Connect(pyr, spike_recorder_pyr)
+        spike_recorder_inter = nest.Create('spike_recorder')
+        nest.Connect(inter, spike_recorder_pyr)
 
-        multimeter = nest.Create('multimeter')
-        multimeter.set(record_from=["V_m"])
-        nest.Connect(multimeter, pyr)
+        multimeter_pyr = nest.Create('multimeter')
+        multimeter_pyr.set(record_from=["V_m"])
+        nest.Connect(multimeter_pyr, pyr)
 
-        set_connection_weights_s1(pyr, ec_parrot, ca3_parrot, inter, ms_parrot, self.weights, self.G_e, self.G_i, self.V_e, self.V_i)
+        multimeter_inter = nest.Create('multimeter')
+        multimeter_inter.set(record_from=["V_m"])
+        nest.Connect(multimeter_inter, inter)
+
+        set_connection_weights(pyr, ec_parrot, ca3_parrot, inter, ms_parrot, self.weights, self.G_e, self.G_i, self.V_e, self.V_i,
+                               self.num_pyr, self.num_int)
 
         nest.Simulate(self.runtime)
 
         self.simulated = True
 
-        spikes = nest.GetStatus(spike_recorder, "events")[0]
-        senders = spikes["senders"]
-        times = spikes["times"]
+        spikes_pyr = nest.GetStatus(spike_recorder_pyr, "events")[0]
+        senders = spikes_pyr["senders"]
+        times = spikes_pyr["times"]
 
-        dmm = multimeter.get()
-        Vms = dmm["events"]["V_m"] #For some reason this only goes up to runtime - 1
-        ts = dmm["events"]["times"]
+        dmm_pyr = multimeter_pyr.get()
+        Vms_pyr = dmm_pyr["events"]["V_m"] #For some reason this only goes up to runtime - 1
+        ts_pyr = dmm_pyr["events"]["times"]
 
-        results = [times[senders == neuron_id] for neuron_id in pyr]
-        results = simulation_results_to_spike_trains(results, self.runtime)
+        results_pyr = [times[senders == neuron_id] for neuron_id in pyr]
+        results_pyr = simulation_results_to_spike_trains(results_pyr, self.runtime)
 
-        self.spike_trains = results
-        self.voltage_traces = tidy_Vms(Vms, self.num_neurons) 
-        self.spike_recorder = spike_recorder
+        self.spike_trains_pyr = results_pyr
+        self.voltage_traces_pyr = tidy_Vms(Vms_pyr, self.num_pyr)
+        self.spike_recorder_pyr = spike_recorder_pyr
 
+        spikes_int = nest.GetStatus(spike_recorder_inter, "events")[0]
+        senders = spikes_int["senders"]
+        times = spikes_int["times"]
+
+        dmm_int = multimeter_inter.get()
+        Vms_int = dmm_int["events"]["V_m"] #For some reason this only goes up to runtime - 1
+        ts_int = dmm_int["events"]["times"]
+
+        results_int = [times[senders == neuron_id] for neuron_id in inter]
+        results_int = simulation_results_to_spike_trains(results_int, self.runtime)
+
+        self.spike_trains_int = results_int
+        self.voltage_traces_inter = tidy_Vms(Vms_int, self.num_int)
+        self.spike_recorder_inter = spike_recorder_inter
+    
     def check_simulated(self):
         '''
         Checks if a simulation has been run
@@ -86,21 +116,33 @@ class NeuronalNetwork:
 
         return self.simulated
 
-    def get_spike_trains(self):
+    def get_spike_trains(self, category):
         '''
-        Gets the spike trains for each neuron produced by the simulation
-        Takes in no parameters and returns a 2d numpy array
+        Gets the spike trains for each neuron in a specific category produced by the simulation
+        Takes in a category paramater and returns a 2d numpy array
         '''
         if self.simulated:
-            return self.spike_trains
+            if category == 'Place':
+                return self.spike_trains_pyr
+            elif category == 'Inter':
+                return self.spike_trains_inter
+            else:
+                print('Not a valid category!')
+                return None
     
-    def get_voltage_traces(self):
+    def get_voltage_traces(self, category):
         '''
-        Gets the voltage traces for each neuron produced by the simulation
-        Takes in no paramters and returns a 2d numpy array
+        Gets the voltage traces for each neuron in a specific category produced by the simulation
+        Takes in a category paramater and returns a 2d numpy array
         '''
         if self.simulated:
-            return self.voltage_traces
+            if category == 'Place':
+                return self.voltage_traces_pyr
+            elif category == 'Inter':
+                return self.voltage_traces_inter
+            else:
+                print('Not a valid category!')
+                return None
         
     def show_raster(self):
         '''
@@ -108,7 +150,8 @@ class NeuronalNetwork:
         Takes in no paramters and returns nothing
         '''
         if self.simulated:
-            nest.raster_plot.from_device(self.spike_recorder)
+            nest.raster_plot.from_device(self.spike_recorder_pyr)
+            nest.raster_plot.from_device(self.spike_recorder_inter)
         else:
             print("No simulation has been run!")
     
@@ -134,7 +177,7 @@ class NeuronalNetwork:
 #Converts the Vms recorded from simulation to a nested array of voltage traces for each neuron
 def tidy_Vms(Vms, num_neurons):
     '''
-    Converts the Vms recorded from the simulation intoto a nested array of voltage traces for each neuron
+    Converts the Vms recorded from the simulation into a nested array of voltage traces for each neuron
     Takes in a 1d aray of voltages ([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3]), the number of neurons (integer), and outputs a 2d numpy array
     '''
     voltage_traces = []
@@ -143,6 +186,7 @@ def tidy_Vms(Vms, num_neurons):
         for j in range(i, len(Vms), num_neurons):
             voltage_trace.append(Vms[j])
         voltage_traces.append(voltage_trace)
+
     return np.array(voltage_traces)
 
 def simulation_results_to_spike_trains(results, runtime):
@@ -151,9 +195,9 @@ def simulation_results_to_spike_trains(results, runtime):
     Output is an array of arrays, each of which is a spike train
     '''
 
-    num_neurons = len(results)
-    spike_trains = np.zeros((num_neurons, runtime))
-    for i in range(num_neurons):
+    num_ca1_neurons = len(results)
+    spike_trains = np.zeros((num_ca1_neurons, runtime))
+    for i in range(num_ca1_neurons):
         spike_train = np.zeros(runtime)
         for time in results[i]:
             spike_train[int(time) - 1] = 1.0
@@ -167,31 +211,31 @@ def connect_weights(A, B, W, G, V):
     '''
     nest.Connect(A, B, 'all_to_all', syn_spec={'weight': np.transpose(W) * G * V})
         
-def set_connection_weights_s1(pyr, ec, ca3, inter, ms, weights, G_e, G_i, V_e, V_i):
+def set_connection_weights(pyr, ec, ca3, inter, ms, weights, G_e, G_i, V_e, V_i, num_pyr, num_int):
 
     '''
     Sets all connection weightings
     '''
     
-    pyr_pyr_conns = weights[0:206, 0:206]
+    pyr_pyr_conns = weights[0:num_pyr, 0:num_pyr]
     connect_weights(pyr, pyr, pyr_pyr_conns, G_e, V_e)
 
-    ec_pyr_conns = weights[206:226, 0:206]
+    ec_pyr_conns = weights[num_pyr:num_pyr+20, 0:num_pyr]
     connect_weights(ec, pyr, ec_pyr_conns, G_e, V_e)
 
-    ec_inter_conns = weights[206:226, 246:266]
+    ec_inter_conns = weights[num_pyr:num_pyr+20, num_pyr+40:num_pyr+40+num_int]
     connect_weights(ec, inter, ec_inter_conns, G_e, V_e)
 
-    ca3_pyr_conns = weights[226:246, 0:206]
+    ca3_pyr_conns = weights[num_pyr+20:num_pyr+40, 0:num_pyr]
     connect_weights(ca3, pyr, ca3_pyr_conns, G_e, V_e)
 
-    ca3_inter_conns = weights[226:246, 246:266]
+    ca3_inter_conns = weights[num_pyr+20:num_pyr+40, num_pyr+40:num_pyr+40+num_int]
     connect_weights(ca3, inter, ca3_inter_conns, G_e, V_e)
 
-    inter_pyr_conns = weights[246:266, 0:206]
+    inter_pyr_conns = weights[num_pyr+40:num_pyr+40+num_int, 0:num_pyr]
     connect_weights(inter, pyr, inter_pyr_conns, G_i, V_i)
 
-    ms_inter_conns = weights[266:276, 246:266]
+    ms_inter_conns = weights[num_pyr+40+num_int: num_pyr+50+num_int, num_pyr+40:num_pyr+40+num_int]
     connect_weights(ms, inter, ms_inter_conns, G_i, V_i)
 
 def initialize_neuron_group(type, n=1, params={}, initial_vm = None):

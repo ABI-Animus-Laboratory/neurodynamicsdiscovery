@@ -9,13 +9,13 @@ def ssd_with_l1(m1, m2, lamb, weights):
     l1_penalty = np.sum(lamb * np.abs(weights))
     return sum_squared_difference + l1_penalty
 
-def initialize_connectivity_matrix_normal_distribution():
+def initialize_connectivity_matrix_normal_distribution(categorised_neurons):
     '''
     order and quantities
-    206 pyramidal neurons
+    num_pyr pyramidal neurons
     20 ec
     20 ca3
-    20 interneurons
+    num_int interneurons
     10 medial septum
 
     excitatory connections
@@ -27,32 +27,39 @@ def initialize_connectivity_matrix_normal_distribution():
     int -> pyr
     ms -> int
     '''
-    num_neurons = 276
+
+    num_pyr = len(categorised_neurons['Place'])
+    num_int = len(categorised_neurons['Interneuron'])
+    num_neurons = num_pyr + num_int + 50
+    print(num_pyr)
+
     matrix = np.zeros((num_neurons, num_neurons))
     #Pyramidal neurons
-    for i in range(206):
+    for i in range(num_pyr):
         #Pyramidal to Pyramidal
-        matrix[i][0:206] = np.abs(np.random.normal(1, scale=0.4, size=206))
+        matrix[i][0:num_pyr] = np.abs(np.random.normal(1, scale=0.4, size=num_pyr))
     #EC
-    for i in range(206, 226):
+    for i in range(num_pyr, num_pyr+20):
         #EC to Pyramidal
-        matrix[i][0:206] = np.abs(np.random.normal(1, scale=0.4, size=206))
+        matrix[i][0:num_pyr] = np.abs(np.random.normal(1, scale=0.4, size=num_pyr))
         #EC to Interneurons
-        matrix[i][246:266] = np.abs(np.random.normal(1, scale=0.4, size=20))
+        print(matrix[i][num_pyr+40:num_pyr+40+num_int])
+        print(np.abs(np.random.normal(1, scale=0.4, size=num_int)))
+        matrix[i][num_pyr+40:num_pyr+40+num_int] = np.abs(np.random.normal(1, scale=0.4, size=num_int))
     #CA3
-    for i in range(226, 246):
+    for i in range(num_pyr+20, num_pyr+40):
         #CA3 to Pyramidal
-        matrix[i][0:206] = np.abs(np.random.normal(1, scale=0.4, size=206))
+        matrix[i][0:num_pyr] = np.abs(np.random.normal(1, scale=0.4, size=num_pyr))
         #CA3 to Interneurons
-        matrix[i][246:266] = np.abs(np.random.normal(1, scale=0.4, size=20))
+        matrix[i][num_pyr+40:num_pyr+40+num_int] = np.abs(np.random.normal(1, scale=0.4, size=num_int))
     #Interneurons
-    for i in range(246, 266):
+    for i in range(num_pyr+40, num_pyr+40+num_int):
         #Interneurons to Pyramidal
-        matrix[i][0:206] = np.abs(np.random.normal(1, scale=0.4, size=206))
+        matrix[i][0:num_pyr] = np.abs(np.random.normal(1, scale=0.4, size=num_pyr))
     #Medial Septum
-    for i in range(266, 276):
+    for i in range(num_pyr+40+num_int, num_pyr+50+num_int):
         #Medial Septum to Interneurons
-        matrix[i][246:266] = np.abs(np.random.normal(1, scale=0.4, size=20))
+        matrix[i][num_pyr+40:num_pyr+40+num_int] = np.abs(np.random.normal(1, scale=0.4, size=num_int))
 
     return matrix
     
