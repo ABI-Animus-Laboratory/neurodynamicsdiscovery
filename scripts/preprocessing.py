@@ -13,7 +13,6 @@ def preprocess_spike_data(an_array):
         if an_array[i][0] != 0:
             an_array[i][0] = 1
     return an_array
-
     
 
                 

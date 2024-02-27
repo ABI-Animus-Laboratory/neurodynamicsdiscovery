@@ -1,44 +1,6 @@
 import numpy as np
 import nest
-from scripts import visualizations, initializations, experiments
-
-def simulation_results_to_spike_trains(results, runtime):
-    #Input is a list of np arrays, each representing the times at which a neuron spiked
-    #Output is an array of arrays, each of which is a spike train
-    num_neurons = len(results)
-    spike_trains = np.zeros((num_neurons, runtime))
-    for i in range(num_neurons):
-        spike_train = np.zeros(runtime)
-        for time in results[i]:
-            spike_train[int(time) - 1] = 1.0
-        spike_trains[i] = spike_train
-    return spike_trains
-    
-def connect_weights(A, B, W, G, V):
-    nest.Connect(A, B, 'all_to_all', syn_spec={'weight': np.transpose(W) * G * V})
         
-def set_connection_weights_s1(pyr, ec, ca3, inter, ms, weights, G_e, G_i, V_e, V_i):
-    pyr_pyr_conns = weights[0:206, 0:206]
-    connect_weights(pyr, pyr, pyr_pyr_conns, G_e, V_e)
-
-    ec_pyr_conns = weights[206:226, 0:206]
-    connect_weights(ec, pyr, ec_pyr_conns, G_e, V_e)
-
-    ec_inter_conns = weights[206:226, 246:266]
-    connect_weights(ec, inter, ec_inter_conns, G_e, V_e)
-
-    ca3_pyr_conns = weights[226:246, 0:206]
-    connect_weights(ca3, pyr, ca3_pyr_conns, G_e, V_e)
-
-    ca3_inter_conns = weights[226:246, 246:266]
-    connect_weights(ca3, inter, ca3_inter_conns, G_e, V_e)
-
-    inter_pyr_conns = weights[246:266, 0:206]
-    connect_weights(inter, pyr, inter_pyr_conns, G_i, V_i)
-
-    ms_inter_conns = weights[266:276, 246:266]
-    connect_weights(ms, inter, ms_inter_conns, G_i, V_i)
-    
 def ssd_with_l1(m1, m2, lamb, weights):
     '''
     Sum of squared differences with lasso regularization cost function between two same-shape 2d numpy arrays
@@ -47,12 +9,57 @@ def ssd_with_l1(m1, m2, lamb, weights):
     l1_penalty = np.sum(lamb * np.abs(weights))
     return sum_squared_difference + l1_penalty
 
-def simulate(weights, setup=1):
-    nest.ResetKernel()
-    if setup == 1:
-        results = experiments.run_s1(weights)
-    return results
+def initialize_connectivity_matrix_normal_distribution(categorised_neurons):
+    '''
+    order and quantities
+    num_pyr pyramidal neurons
+    20 ec
+    20 ca3
+    num_int interneurons
+    10 medial septum
 
+    excitatory connections
+    pyr -> pyr
+    ca3 -> pyr, inter
+    ec -> pyr, inter
+
+    inh connections
+    int -> pyr
+    ms -> int
+    '''
+
+    num_pyr = len(categorised_neurons['Place'])
+    num_int = len(categorised_neurons['Interneuron'])
+    num_neurons = num_pyr + num_int + 50
+    print(num_pyr)
+
+    matrix = np.zeros((num_neurons, num_neurons))
+    #Pyramidal neurons
+    for i in range(num_pyr):
+        #Pyramidal to Pyramidal
+        matrix[i][0:num_pyr] = np.abs(np.random.normal(1, scale=0.4, size=num_pyr))
+    #EC
+    for i in range(num_pyr, num_pyr+20):
+        #EC to Pyramidal
+        matrix[i][0:num_pyr] = np.abs(np.random.normal(1, scale=0.4, size=num_pyr))
+        #EC to Interneurons
+        print(matrix[i][num_pyr+40:num_pyr+40+num_int])
+        print(np.abs(np.random.normal(1, scale=0.4, size=num_int)))
+        matrix[i][num_pyr+40:num_pyr+40+num_int] = np.abs(np.random.normal(1, scale=0.4, size=num_int))
+    #CA3
+    for i in range(num_pyr+20, num_pyr+40):
+        #CA3 to Pyramidal
+        matrix[i][0:num_pyr] = np.abs(np.random.normal(1, scale=0.4, size=num_pyr))
+        #CA3 to Interneurons
+        matrix[i][num_pyr+40:num_pyr+40+num_int] = np.abs(np.random.normal(1, scale=0.4, size=num_int))
+    #Interneurons
+    for i in range(num_pyr+40, num_pyr+40+num_int):
+        #Interneurons to Pyramidal
+        matrix[i][0:num_pyr] = np.abs(np.random.normal(1, scale=0.4, size=num_pyr))
+    #Medial Septum
+    for i in range(num_pyr+40+num_int, num_pyr+50+num_int):
+        #Medial Septum to Interneurons
+        matrix[i][num_pyr+40:num_pyr+40+num_int] = np.abs(np.random.normal(1, scale=0.4, size=num_int))
+
+    return matrix
     
-
-
