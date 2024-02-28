@@ -8,7 +8,7 @@ class NeuronalNetwork:
     '''
     Class that represents the model
     '''
-    def __init__(self, weights, categorized_neurons, G_e = 3.8, G_i = -1, runtime = 17988, gamma_rate = 40, theta_rate = 7):
+    def __init__(self, weights, categorized_neurons, G_e = 3.7, G_i = -1, runtime = 17988, gamma_rate = 40, theta_rate = 7):
         self.weights = weights
         self.G_e = G_e
         self.G_i = G_i
@@ -40,6 +40,7 @@ class NeuronalNetwork:
         Takes in no inputs and has no output
         '''
         nest.ResetKernel()
+        #Debugging
         pyr = initialize_neuron_group('iaf_psc_alpha', self.num_pyr, pyr_hcamp_deco2012.params)
         inter = initialize_neuron_group('iaf_psc_alpha', self.num_int, int_hcamp_deco2012.params)
 
