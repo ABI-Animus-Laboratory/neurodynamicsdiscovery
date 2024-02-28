@@ -29,11 +29,10 @@ class NeuronalNetwork:
         self.spike_trains_inter = None
 
         self.voltage_traces_pyr = None
-        self.voltage_traces_inter = None
+        self.voltage_traces_int = None
 
         self.spike_recorder_pyr = None
-        self.spike_recorder_inter = None
-        
+        self.spike_recorder_int = None
 
     def simulate(self):
         '''
@@ -43,6 +42,7 @@ class NeuronalNetwork:
         nest.ResetKernel()
         pyr = initialize_neuron_group('iaf_psc_alpha', self.num_pyr, pyr_hcamp_deco2012.params)
         inter = initialize_neuron_group('iaf_psc_alpha', self.num_int, int_hcamp_deco2012.params)
+
         ec_input = nest.Create('poisson_generator')
         ec_input.set(rate=self.gamma_rate)
         ec_parrot = nest.Create('parrot_neuron', n=20)
@@ -60,8 +60,9 @@ class NeuronalNetwork:
 
         spike_recorder_pyr = nest.Create('spike_recorder')
         nest.Connect(pyr, spike_recorder_pyr)
+
         spike_recorder_inter = nest.Create('spike_recorder')
-        nest.Connect(inter, spike_recorder_pyr)
+        nest.Connect(inter, spike_recorder_inter)
 
         multimeter_pyr = nest.Create('multimeter')
         multimeter_pyr.set(record_from=["V_m"])
@@ -84,7 +85,6 @@ class NeuronalNetwork:
 
         dmm_pyr = multimeter_pyr.get()
         Vms_pyr = dmm_pyr["events"]["V_m"] #For some reason this only goes up to runtime - 1
-        ts_pyr = dmm_pyr["events"]["times"]
 
         results_pyr = [times[senders == neuron_id] for neuron_id in pyr]
         results_pyr = simulation_results_to_spike_trains(results_pyr, self.runtime)
@@ -99,14 +99,13 @@ class NeuronalNetwork:
 
         dmm_int = multimeter_inter.get()
         Vms_int = dmm_int["events"]["V_m"] #For some reason this only goes up to runtime - 1
-        ts_int = dmm_int["events"]["times"]
 
         results_int = [times[senders == neuron_id] for neuron_id in inter]
         results_int = simulation_results_to_spike_trains(results_int, self.runtime)
 
         self.spike_trains_int = results_int
-        self.voltage_traces_inter = tidy_Vms(Vms_int, self.num_int)
-        self.spike_recorder_inter = spike_recorder_inter
+        self.voltage_traces_int = tidy_Vms(Vms_int, self.num_int)
+        self.spike_recorder_int = spike_recorder_inter
     
     def check_simulated(self):
         '''
@@ -139,38 +138,38 @@ class NeuronalNetwork:
             if category == 'Place':
                 return self.voltage_traces_pyr
             elif category == 'Inter':
-                return self.voltage_traces_inter
+                return self.voltage_traces_int
             else:
                 print('Not a valid category!')
                 return None
         
     def show_raster(self):
         '''
-        Displays a raster plot based on the spike trains obtained from the simulation
+        Displays two raster plots for place cells and interneurons based on the spike trains obtained from the simulation
         Takes in no paramters and returns nothing
         '''
         if self.simulated:
             nest.raster_plot.from_device(self.spike_recorder_pyr)
-            nest.raster_plot.from_device(self.spike_recorder_inter)
+            nest.raster_plot.from_device(self.spike_recorder_int)
         else:
             print("No simulation has been run!")
     
-    def show_voltage_trace(self, neuron_id):
-        '''
-        Displays the voltage trace for a specified neuron
-        Takes in an integer and returns nothing
-        '''
-        if self.simulated:
-            fig = plt.figure()
-            voltages = self.voltage_traces[neuron_id - 1]
-            ts = range(1, self.runtime)
-            plt.plot(ts, voltages)
-            plt.title(f'Voltage trace for Neuron {neuron_id}')
-            plt.xlabel('Frames')
-            plt.ylabel('Voltage (V)')
-            plt.show()
-        else:
-            print("No simulation has been run!")
+    # def show_voltage_trace(self, neuron_id):
+    #     '''
+    #     Displays the voltage trace for a specified neuron
+    #     Takes in an integer and returns nothing
+    #     '''
+    #     if self.simulated:
+    #         fig = plt.figure()
+    #         voltages = self.voltage_traces[neuron_id - 1]
+    #         ts = range(1, self.runtime)
+    #         plt.plot(ts, voltages)
+    #         plt.title(f'Voltage trace for Neuron {neuron_id}')
+    #         plt.xlabel('Frames')
+    #         plt.ylabel('Voltage (V)')
+    #         plt.show()
+    #     else:
+    #         print("No simulation has been run!")
     
 #Helper functions for the model class begin here
         
@@ -195,9 +194,9 @@ def simulation_results_to_spike_trains(results, runtime):
     Output is an array of arrays, each of which is a spike train
     '''
 
-    num_ca1_neurons = len(results)
-    spike_trains = np.zeros((num_ca1_neurons, runtime))
-    for i in range(num_ca1_neurons):
+    num_neurons = len(results)
+    spike_trains = np.zeros((num_neurons, runtime))
+    for i in range(num_neurons):
         spike_train = np.zeros(runtime)
         for time in results[i]:
             spike_train[int(time) - 1] = 1.0

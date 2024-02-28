@@ -30,8 +30,7 @@ def initialize_connectivity_matrix_normal_distribution(categorised_neurons):
 
     num_pyr = len(categorised_neurons['Place'])
     num_int = len(categorised_neurons['Interneuron'])
-    num_neurons = num_pyr + num_int + 50
-    print(num_pyr)
+    num_neurons = num_pyr + num_int + 50 #20 EC + 20 CA3 + 10 MS neurons = 50 total neurons
 
     matrix = np.zeros((num_neurons, num_neurons))
     #Pyramidal neurons
