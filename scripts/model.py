@@ -40,71 +40,78 @@ class NeuronalNetwork:
         Takes in no inputs and has no output
         '''
         nest.ResetKernel()
-
+        
+        #Initialization of pyramimdal and interneurons
         pyr = initialize_neuron_group('iaf_psc_alpha', self.num_pyr, pyr_hcamp_deco2012.params)
         inter = initialize_neuron_group('iaf_psc_alpha', self.num_int, int_hcamp_deco2012.params)
 
+        #Initialization of EC neurons and connections
         ec_input = nest.Create('poisson_generator')
         ec_input.set(rate=self.gamma_rate)
         ec_parrot = nest.Create('parrot_neuron', n=20)
         nest.Connect(ec_input, ec_parrot)
 
+        #Initialization of CA3 neurons and connections
         ca3_input = nest.Create('poisson_generator')
         ca3_input.set(rate=self.gamma_rate)
         ca3_parrot = nest.Create('parrot_neuron', n=20)
         nest.Connect(ca3_input, ca3_parrot)
 
+        #Initialization of MS neurons and connections
         ms_input = nest.Create('poisson_generator')
         ms_input.set(rate=self.theta_rate)
         ms_parrot = nest.Create('parrot_neuron', n=10)
         nest.Connect(ms_input, ms_parrot)
 
+        #Initialization of spike recorders and connections for pyramidal and interneurons
         spike_recorder_pyr = nest.Create('spike_recorder')
         nest.Connect(pyr, spike_recorder_pyr)
-
         spike_recorder_inter = nest.Create('spike_recorder')
         nest.Connect(inter, spike_recorder_inter)
 
+        #Initialization of multimeter and connections for pyramidal and interneurons
         multimeter_pyr = nest.Create('multimeter')
         multimeter_pyr.set(record_from=["V_m"])
         nest.Connect(multimeter_pyr, pyr)
-
         multimeter_inter = nest.Create('multimeter')
         multimeter_inter.set(record_from=["V_m"])
         nest.Connect(multimeter_inter, inter)
 
+        #Initialization of connectivity weights
         set_connection_weights(pyr, ec_parrot, ca3_parrot, inter, ms_parrot, self.weights, self.G_e, self.G_i, self.V_e, self.V_i,
                                self.num_pyr, self.num_int)
 
-        nest.Simulate(self.runtime)
+        print(self.num_pyr)
+        print(self.num_int)
+        for connection in nest.GetConnections():
+                print(connection)
+
+        #Run simulation
+        nest.Simulate(self.runtime + 1) #Simulation recording stops before the last time step, hence +1
 
         self.simulated = True
 
+        #Accessing, processing and storing recorded place cell variables from simulation
         spikes_pyr = nest.GetStatus(spike_recorder_pyr, "events")[0]
         senders = spikes_pyr["senders"]
         times = spikes_pyr["times"]
-
         dmm_pyr = multimeter_pyr.get()
-        Vms_pyr = dmm_pyr["events"]["V_m"] #For some reason this only goes up to runtime - 1
-
-        results_pyr = [times[senders == neuron_id] for neuron_id in pyr]
-        results_pyr = simulation_results_to_spike_trains(results_pyr, self.runtime)
-
-        self.spike_trains_pyr = results_pyr
+        Vms_pyr = dmm_pyr["events"]["V_m"] 
+        spike_trains_pyr = [times[senders == neuron_id] for neuron_id in pyr]
+        spike_trains_pyr = simulation_results_to_spike_trains(spike_trains_pyr, self.runtime)
+        self.spike_trains_pyr = spike_trains_pyr
         self.voltage_traces_pyr = tidy_Vms(Vms_pyr, self.num_pyr)
         self.spike_recorder_pyr = spike_recorder_pyr
 
+        #Accessing, processing and storing recorded interneuron variables from simulation
         spikes_int = nest.GetStatus(spike_recorder_inter, "events")[0]
         senders = spikes_int["senders"]
         times = spikes_int["times"]
-
         dmm_int = multimeter_inter.get()
-        Vms_int = dmm_int["events"]["V_m"] #For some reason this only goes up to runtime - 1
-
-        results_int = [times[senders == neuron_id] for neuron_id in inter]
-        results_int = simulation_results_to_spike_trains(results_int, self.runtime)
-
-        self.spike_trains_int = results_int
+        Vms_int = dmm_int["events"]["V_m"] 
+        spike_trains_int = [times[senders == neuron_id] for neuron_id in inter]
+        spike_trains_int = simulation_results_to_spike_trains(spike_trains_int, self.runtime)
+        self.spike_trains_int = spike_trains_int
         self.voltage_traces_int = tidy_Vms(Vms_int, self.num_int)
         self.spike_recorder_int = spike_recorder_inter
     
@@ -155,26 +162,8 @@ class NeuronalNetwork:
         else:
             print("No simulation has been run!")
     
-    # def show_voltage_trace(self, neuron_id):
-    #     '''
-    #     Displays the voltage trace for a specified neuron
-    #     Takes in an integer and returns nothing
-    #     '''
-    #     if self.simulated:
-    #         fig = plt.figure()
-    #         voltages = self.voltage_traces[neuron_id - 1]
-    #         ts = range(1, self.runtime)
-    #         plt.plot(ts, voltages)
-    #         plt.title(f'Voltage trace for Neuron {neuron_id}')
-    #         plt.xlabel('Frames')
-    #         plt.ylabel('Voltage (V)')
-    #         plt.show()
-    #     else:
-    #         print("No simulation has been run!")
-    
 #Helper functions for the model class begin here
         
-#Converts the Vms recorded from simulation to a nested array of voltage traces for each neuron
 def tidy_Vms(Vms, num_neurons):
     '''
     Converts the Vms recorded from the simulation into a nested array of voltage traces for each neuron
