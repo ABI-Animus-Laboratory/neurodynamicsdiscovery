@@ -10,7 +10,7 @@ class NeuronCategorizer:
     silent_cells = None
     interneurons = None
 
-    def __init__(self, spike_trains, calcium_traces, eztrack_data, different_framerates = True, pf_area = 0.40, acceptance = 0.65, silent_cutoff = 5, interneuron_cutoff = 275,
+    def __init__(self, spike_trains, calcium_traces, eztrack_data, different_framerates = True, pf_area = 0.40, acceptance = 0.58, silent_cutoff = 10, interneuron_cutoff = 275,
                  separation_threshold = 75):
         
         self.spike_trains = spike_trains
@@ -82,14 +82,6 @@ class NeuronCategorizer:
                     neuron_spike_coords.append((x_coords_behaviour[j], y_coords_behaviour[j]))
             spike_coordinates[f'{i+1}'] = neuron_spike_coords
         self.spike_coordinates = spike_coordinates
-
-    def calculate_centroid(self, coords):
-        '''
-        Calculates the arithmetic mean coordinate for an array of coordinates
-        Returns a two-element tuple
-        '''
-
-        return np.average(coords, axis=0)
     
     def categorize_neurons(self):
         
@@ -107,7 +99,7 @@ class NeuronCategorizer:
         
         self.categorized_neurons = categorized_neurons
 
-    def get_neuron_categorization_square_box(self, neuron_spike_coords, ofield_w):
+    def get_neuron_categorization_square_box(self, neuron_spike_coords):
 
         '''
         Checks whether a neuron is silent, interneuron or place cell using the square box method
@@ -120,7 +112,7 @@ class NeuronCategorizer:
             return 'Interneuron'
 
         box_radius = (math.sqrt(self.pf_area) * self.ofield_w) / 2
-        centroid = self.calculate_centroid(neuron_spike_coords)
+        centroid = calculate_centroid(neuron_spike_coords)
 
         #The origin of the box is at the top left
         box_left, box_right = centroid[0] + box_radius, centroid[0] - box_radius
@@ -149,7 +141,6 @@ class NeuronCategorizer:
             self.int_obs = np.array(int_obs)
         else:
             print("No neurons have been categorized yet!")
-
 
     def run_categorization(self):
 
@@ -184,7 +175,7 @@ class NeuronCategorizer:
         
         box_radius = math.sqrt(self.ofield_w * self.ofield_h * self.pf_area) / 2
 
-        centroid = self.calculate_centroid(neuron_spike_coords)
+        centroid = calculate_centroid(neuron_spike_coords)
 
         box_top = (centroid[0] - self.ofield_x_min - box_radius) // 2
         box_left = (centroid[1] - self.ofield_y_min - box_radius) // 2
@@ -219,7 +210,7 @@ class NeuronCategorizer:
             for neuron_id in self.categorized_neurons[category].keys():
                 neuron_spike_coords = self.categorized_neurons[category][neuron_id]
 
-                centroid = self.calculate_centroid(neuron_spike_coords)
+                centroid = calculate_centroid(neuron_spike_coords)
                 box_top = (centroid[0] - self.ofield_x_min - box_radius) // 2
                 box_left = (centroid[1] - self.ofield_y_min - box_radius) // 2
 
@@ -247,8 +238,14 @@ class NeuronCategorizer:
                 plt.close(fig)               
 
 
+def calculate_centroid(coords):
+    '''
+    Calculates the arithmetic mean coordinate for an array of coordinates
+    Returns a two-element tuple
+    '''
 
-        
+    return np.average(coords, axis=0)
+    
 
 
         
