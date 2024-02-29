@@ -94,7 +94,7 @@ class NeuronCategorizer:
 
         for neuron_id in self.spike_coordinates.keys():
             neuron_spike_coords = self.spike_coordinates[neuron_id]
-            label = self.get_neuron_categorization_square_box(neuron_spike_coords, self.ofield_w)
+            label = self.get_neuron_categorization_square_box(neuron_spike_coords)
             categorized_neurons[label][neuron_id] = neuron_spike_coords
         
         self.categorized_neurons = categorized_neurons

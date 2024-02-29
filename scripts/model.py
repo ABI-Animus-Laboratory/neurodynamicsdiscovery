@@ -40,7 +40,7 @@ class NeuronalNetwork:
         Takes in no inputs and has no output
         '''
         nest.ResetKernel()
-        #Debugging
+
         pyr = initialize_neuron_group('iaf_psc_alpha', self.num_pyr, pyr_hcamp_deco2012.params)
         inter = initialize_neuron_group('iaf_psc_alpha', self.num_int, int_hcamp_deco2012.params)
 
