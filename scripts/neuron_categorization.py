@@ -10,11 +10,12 @@ class NeuronCategorizer:
     silent_cells = None
     interneurons = None
 
-    def __init__(self, spike_trains, eztrack_data, different_framerates = True, pf_area = 0.40, acceptance = 0.65, silent_cutoff = 5, interneuron_cutoff = 275,
+    def __init__(self, spike_trains, calcium_traces, eztrack_data, different_framerates = True, pf_area = 0.40, acceptance = 0.65, silent_cutoff = 5, interneuron_cutoff = 275,
                  separation_threshold = 75):
         
         self.spike_trains = spike_trains
         self.eztrack_data = eztrack_data
+        self.calcium_traces = calcium_traces
         self.num_calcium_frames = len(spike_trains[0])
         self.num_neurons = len(spike_trains)
         self.different_framerates = different_framerates
@@ -34,6 +35,8 @@ class NeuronCategorizer:
 
         self.spike_coordinates = None
         self.categorized_neurons = None
+        self.place_obs = None
+        self.int_obs = None
 
         self.categorized = False
 
@@ -133,6 +136,20 @@ class NeuronCategorizer:
         if len(neuron_spike_coords) < self.separation_threshold:
             return 'Silent'
         return 'Interneuron'
+    
+    def split_calcium_traces(self):
+        if self.categorized:
+            place_obs = []
+            int_obs = []
+            for neuron_id in self.categorized_neurons['Place']:
+                place_obs.append(self.calcium_traces[int(neuron_id)-1])
+            for neuron_id in self.categorized_neurons['Interneuron']:
+                int_obs.append(self.calcium_traces[int(neuron_id)-1])
+            self.place_obs = np.array(place_obs)
+            self.int_obs = np.array(int_obs)
+        else:
+            print("No neurons have been categorized yet!")
+
 
     def run_categorization(self):
 
@@ -143,6 +160,7 @@ class NeuronCategorizer:
         self.calculate_spike_coordinates()
         self.categorize_neurons()
         self.categorized = True
+        self.split_calcium_traces()
 
     def print_category_counts(self):
 

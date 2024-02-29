@@ -4,9 +4,10 @@ from scripts import model
 from simanneal import Annealer
 
 class SimulatedAnnealing(Annealer):
-    def __init__(self, state, data, lamb, categorized_neurons):
+    def __init__(self, state, place_obs, int_obs, lamb, categorized_neurons):
         self.categorized_neurons = categorized_neurons
-        self.place_obs, self.int_obs = self.split_experimental_data(data)
+        self.place_obs = place_obs
+        self.int_obs = int_obs
         self.lamb = lamb
         self.state = state
 
