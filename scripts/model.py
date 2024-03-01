@@ -25,7 +25,7 @@ class NeuronalNetwork:
         self.num_int = len(categorized_neurons['Interneuron'])
         self.num_ca1_neurons = self.num_pyr + self.num_int
 
-        self.spike_trains_pyr = None
+        self.spike_timings_pyr = None
         self.spike_trains_inter = None
 
         self.voltage_traces_pyr = None
@@ -81,13 +81,8 @@ class NeuronalNetwork:
         set_connection_weights(pyr, ec_parrot, ca3_parrot, inter, ms_parrot, self.weights, self.G_e, self.G_i, self.V_e, self.V_i,
                                self.num_pyr, self.num_int)
 
-        print(self.num_pyr)
-        print(self.num_int)
-        for connection in nest.GetConnections():
-                print(connection)
-
         #Run simulation
-        nest.Simulate(self.runtime + 1) #Simulation recording stops before the last time step, hence +1
+        nest.Simulate(self.runtime)
 
         self.simulated = True
 
@@ -99,7 +94,7 @@ class NeuronalNetwork:
         Vms_pyr = dmm_pyr["events"]["V_m"] 
         spike_trains_pyr = [times[senders == neuron_id] for neuron_id in pyr]
         spike_trains_pyr = simulation_results_to_spike_trains(spike_trains_pyr, self.runtime)
-        self.spike_trains_pyr = spike_trains_pyr
+        self.spike_timings_pyr = spike_trains_pyr
         self.voltage_traces_pyr = tidy_Vms(Vms_pyr, self.num_pyr)
         self.spike_recorder_pyr = spike_recorder_pyr
 
@@ -109,9 +104,9 @@ class NeuronalNetwork:
         times = spikes_int["times"]
         dmm_int = multimeter_inter.get()
         Vms_int = dmm_int["events"]["V_m"] 
-        spike_trains_int = [times[senders == neuron_id] for neuron_id in inter]
-        spike_trains_int = simulation_results_to_spike_trains(spike_trains_int, self.runtime)
-        self.spike_trains_int = spike_trains_int
+        spike_timings_int = [times[senders == neuron_id] for neuron_id in inter]
+        spike_timings_int = simulation_results_to_spike_trains(spike_timings_int, self.runtime)
+        self.spike_trains_int = spike_timings_int
         self.voltage_traces_int = tidy_Vms(Vms_int, self.num_int)
         self.spike_recorder_int = spike_recorder_inter
     
@@ -130,7 +125,7 @@ class NeuronalNetwork:
         '''
         if self.simulated:
             if category == 'Place':
-                return self.spike_trains_pyr
+                return self.spike_timings_pyr
             elif category == 'Inter':
                 return self.spike_trains_inter
             else:
@@ -178,18 +173,19 @@ def tidy_Vms(Vms, num_neurons):
 
     return np.array(voltage_traces)
 
-def simulation_results_to_spike_trains(results, runtime):
+def simulation_results_to_spike_trains(spike_timings, runtime):
     '''
     Input is a list of np arrays, each representing the times at which a neuron spiked
     Output is an array of arrays, each of which is a spike train
     '''
 
-    num_neurons = len(results)
+    num_neurons = len(spike_timings)
     spike_trains = np.zeros((num_neurons, runtime))
+
     for i in range(num_neurons):
         spike_train = np.zeros(runtime)
-        for time in results[i]:
-            spike_train[int(time) - 1] = 1.0
+        for time in spike_timings[i]:
+            spike_train[int(time)-1] = 1.0
         spike_trains[i] = spike_train
     return spike_trains
 
