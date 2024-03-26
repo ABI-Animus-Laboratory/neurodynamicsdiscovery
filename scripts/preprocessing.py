@@ -1,6 +1,4 @@
 import numpy as np
-import nest
-from scripts import visualizations
 
 def preprocess_spike_data(spike_trains):
     '''
@@ -19,6 +17,10 @@ def preprocess_spike_data(spike_trains):
         if spike_trains[i][0] != 0:
             spike_trains[i][0] = 1
     return spike_trains
+
+
+
+
     
 
                 

@@ -147,7 +147,6 @@ class NeuronCategorizer:
         '''
         Runs the neuron categorization pipeline
         '''
-
         self.calculate_spike_coordinates()
         self.categorize_neurons()
         self.categorized = True
