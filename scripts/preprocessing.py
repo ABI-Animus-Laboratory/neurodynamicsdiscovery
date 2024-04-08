@@ -112,6 +112,11 @@ def preprocess_calcium_data(calcium_traces, spike_trains, V_t, V_reset, save_fig
         calcium_traces[index] = calcium
         f_maxs[index] = f_max
 
+    calcium_traces = calcium_traces[:, :-1]
+    f_maxs = f_maxs[: :-1]
+
+
+    
     if save_data:
         np.save('/hpc/mzhu843/modelling/nest/DATA/processed/calcium_traces/C_3_p', calcium_traces)
         

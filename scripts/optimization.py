@@ -20,11 +20,11 @@ class SimulatedAnnealing(Annealer):
         return cost_function
     
     def move(self):
-        for i in range(2000):
+        for i in range(4000):
             x = np.random.randint(0, 175)
             y = np.random.randint(0, 175)
             if self.state[x][y] != 0:
-                self.state[x][y] = min(max(self.state[x][y] + np.random.uniform(-0.05, 0.05), 0.01), 2)    
+                self.state[x][y] = min(max(self.state[x][y] + np.random.uniform(-0.2, 0.2), 0.01), 3)    
         
 def ssd_with_l1(place_obs, place_pred, int_obs, int_pred, lamb, weights):
     '''

@@ -92,6 +92,7 @@ class NeuronalNetwork:
         times = spikes_pyr["times"]
         dmm_pyr = multimeter_pyr.get()
         Vms_pyr = dmm_pyr["events"]["V_m"] 
+
         spike_trains_pyr = [times[senders == neuron_id] for neuron_id in pyr]
         spike_trains_pyr = simulation_results_to_spike_trains(spike_trains_pyr, self.runtime)
         self.spike_timings_pyr = spike_trains_pyr
@@ -223,16 +224,21 @@ def set_connection_weights(pyr, ec, ca3, inter, ms, weights, G_e, G_i, V_e, V_i,
     ms_inter_conns = weights[num_pyr+40+num_int: num_pyr+50+num_int, num_pyr+40:num_pyr+40+num_int]
     connect_weights(ms, inter, ms_inter_conns, G_i, V_i)
 
+# def initialize_neuron_group(type, n=1, params={}, initial_vm = None):
+#     neurons = nest.Create(type, n=n, params=params)
+#     if not initial_vm:
+#         Vth = neurons.get('V_th')[0]
+#         Vreset = neurons.get('V_reset')[0]
+#         neurons.set({"V_m": Vreset + nest.random.uniform(0.0, Vth-Vreset)})
+#     else:
+#         neurons.set({"V_m": initial_vm})
+#     return neurons
+
 def initialize_neuron_group(type, n=1, params={}, initial_vm = None):
     neurons = nest.Create(type, n=n, params=params)
-    if not initial_vm:
-        Vth = neurons.get('V_th')[0]
-        Vreset = neurons.get('V_reset')[0]
-        neurons.set({"V_m": Vreset + nest.random.uniform(0.0, Vth-Vreset)})
-    else:
-        neurons.set({"V_m": initial_vm})
+    Vth = neurons.get('V_th')[0]
+    Vreset = neurons.get('V_reset')[0]
+    neurons.set({"V_m": Vreset})
     return neurons
-
-
 
     
