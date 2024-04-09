@@ -12,7 +12,8 @@ class SimulatedAnnealing(Annealer):
         self.state = state
 
     def energy(self):
-        network = model.NeuronalNetwork(self.state, self.categorized_neurons)
+        #Change this later
+        network = model.NeuronalNetwork(self.state, self.categorized_neurons, runtime=2501)
         network.simulate()
         place_pred = network.get_voltage_traces('Place')
         int_pred = network.get_voltage_traces('Inter')
@@ -21,10 +22,10 @@ class SimulatedAnnealing(Annealer):
     
     def move(self):
         for i in range(4000):
-            x = np.random.randint(0, 175)
-            y = np.random.randint(0, 175)
+            x = np.random.randint(0, np.shape(self.state)[1])
+            y = np.random.randint(0, np.shape(self.state)[0])
             if self.state[x][y] != 0:
-                self.state[x][y] = min(max(self.state[x][y] + np.random.uniform(-0.2, 0.2), 0.01), 3)    
+                self.state[x][y] = min(max(self.state[x][y] + np.random.uniform(-0.4, 0.4), 0.01), 3)    
         
 def ssd_with_l1(place_obs, place_pred, int_obs, int_pred, lamb, weights):
     '''

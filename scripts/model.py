@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import nest
 from scripts import optimization
 from params import pyr_hcamp_deco2012, int_hcamp_deco2012
+import time
 
 class NeuronalNetwork:
     '''
@@ -45,6 +46,7 @@ class NeuronalNetwork:
         pyr = initialize_neuron_group('iaf_psc_alpha', self.num_pyr, pyr_hcamp_deco2012.params)
         inter = initialize_neuron_group('iaf_psc_alpha', self.num_int, int_hcamp_deco2012.params)
 
+
         #Initialization of EC neurons and connections
         ec_input = nest.Create('poisson_generator')
         ec_input.set(rate=self.gamma_rate)
@@ -63,6 +65,7 @@ class NeuronalNetwork:
         ms_parrot = nest.Create('parrot_neuron', n=10)
         nest.Connect(ms_input, ms_parrot)
 
+
         #Initialization of spike recorders and connections for pyramidal and interneurons
         spike_recorder_pyr = nest.Create('spike_recorder')
         nest.Connect(pyr, spike_recorder_pyr)
@@ -77,14 +80,18 @@ class NeuronalNetwork:
         multimeter_inter.set(record_from=["V_m"])
         nest.Connect(multimeter_inter, inter)
 
+
         #Initialization of connectivity weights
         set_connection_weights(pyr, ec_parrot, ca3_parrot, inter, ms_parrot, self.weights, self.G_e, self.G_i, self.V_e, self.V_i,
                                self.num_pyr, self.num_int)
+
+
 
         #Run simulation
         nest.Simulate(self.runtime)
 
         self.simulated = True
+
 
         #Accessing, processing and storing recorded place cell variables from simulation
         spikes_pyr = nest.GetStatus(spike_recorder_pyr, "events")[0]
@@ -99,6 +106,7 @@ class NeuronalNetwork:
         self.voltage_traces_pyr = tidy_Vms(Vms_pyr, self.num_pyr)
         self.spike_recorder_pyr = spike_recorder_pyr
 
+
         #Accessing, processing and storing recorded interneuron variables from simulation
         spikes_int = nest.GetStatus(spike_recorder_inter, "events")[0]
         senders = spikes_int["senders"]
@@ -110,6 +118,7 @@ class NeuronalNetwork:
         self.spike_trains_int = spike_timings_int
         self.voltage_traces_int = tidy_Vms(Vms_int, self.num_int)
         self.spike_recorder_int = spike_recorder_inter
+
     
     def check_simulated(self):
         '''
@@ -234,10 +243,14 @@ def set_connection_weights(pyr, ec, ca3, inter, ms, weights, G_e, G_i, V_e, V_i,
 #         neurons.set({"V_m": initial_vm})
 #     return neurons
 
-def initialize_neuron_group(type, n=1, params={}, initial_vm = None):
+def initialize_neuron_group(type, n=1, params={}):
     neurons = nest.Create(type, n=n, params=params)
-    Vth = neurons.get('V_th')[0]
-    Vreset = neurons.get('V_reset')[0]
+    if n>1:
+        Vth = neurons.get('V_th')[0]
+        Vreset = neurons.get('V_reset')[0]
+    else:
+        Vth = neurons.get('V_th')
+        Vreset = neurons.get('V_reset')
     neurons.set({"V_m": Vreset})
     return neurons
 
