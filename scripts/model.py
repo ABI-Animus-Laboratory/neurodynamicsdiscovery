@@ -22,8 +22,6 @@ class Model:
         self.simulated = False             
 
         self.num_pyr = len(categorized_neurons['Place'])
-        self.num_int = len(categorized_neurons['Interneuron'])
-        self.num_ca1_neurons = self.num_pyr + self.num_int
         
         self.spike_timings_pyr = None
         self.spike_trains_inter = None
@@ -84,8 +82,12 @@ class Model:
 
 class Model1(Model):
     def __init__(self, categorized_neurons, weights = None, G_e = 3.7, G_i = -1, runtime = 17988, gamma_rate = 40, theta_rate = 7):
+        
 
         super().__init__(categorized_neurons, G_e, G_i, runtime, gamma_rate, theta_rate)
+
+        self.num_int = len(categorized_neurons['Interneuron'])
+        self.num_ca1_neurons = self.num_pyr + self.num_int
         if weights is None:
             self.weights = self.initialize_connectivity_matrix_normal_distribution()
         else:
@@ -119,7 +121,6 @@ class Model1(Model):
         ms_input.set(rate=self.theta_rate)
         ms_parrot = nest.Create('parrot_neuron', n=10)
         nest.Connect(ms_input, ms_parrot)
-
 
         #Initialization of spike recorders and connections for pyramidal and interneurons
         spike_recorder_pyr = nest.Create('spike_recorder')
@@ -249,9 +250,17 @@ class Model1(Model):
         connect_weights(ms, inter, ms_inter_conns, G_i, V_i)
 
 class Model2(Model):
-    def __init__(self, categorized_neurons, spike_weights, weights = None, G_e = 3.7, G_i = -1, runtime = 3000, gamma_rate = 40, theta_rate = 7):
+    def __init__(self, categorized_neurons, spike_weights = None, weights = None, G_e = 3.7, G_i = -1, runtime = 3000, gamma_rate = 40, theta_rate = 7):
         super().__init__(categorized_neurons, G_e, G_i, runtime, gamma_rate, theta_rate)
         self.spike_weights = spike_weights
+
+        self.num_ca1_neurons = self.num_pyr
+
+        if spike_weights is None:
+            self.spike_weights = np.ones((5, self.runtime))
+        else:
+            self.spike_weights = spike_weights
+
         if weights is None:
             self.weights = self.initialize_connectivity_matrix_normal_distribution()
         else:
@@ -259,17 +268,59 @@ class Model2(Model):
 
     def simulate(self):
         nest.ResetKernel()
-
         pyr = initialize_neuron_group('iaf_psc_alpha', 5, pyr_hcamp_deco2012.params)
 
         spike_times = [t for t in range(1, self.runtime+1)]
+
         input1 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.spike_weights[0]}, n=1)
         input2 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.spike_weights[1]}, n=1)
         input3 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.spike_weights[2]}, n=1)
-        input4 = nest.Create("spike_generator", params={"spike_times": spike_times "spike_weights": self.spike_weights[3]}, n=1)
+        input4 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.spike_weights[3]}, n=1)
         input5 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.spike_weights[4]}, n=1)
 
+        spike_recorder_pyr = nest.Create('spike_recorder')
+        nest.Connect(pyr, spike_recorder_pyr)
+        multimeter_pyr = nest.Create('multimeter')
+        multimeter_pyr.set(record_from=["V_m"])
+        
+        nest.Connect(multimeter_pyr, pyr)
+
+        self.set_connection_weights(pyr, input1, input2, input3, input4, input5)
+        nest.Simulate(self.runtime)
+
+        self.simulated = True
+
+        spikes_pyr = nest.GetStatus(spike_recorder_pyr, "events")[0]
+        senders = spikes_pyr["senders"]
+        times = spikes_pyr["times"]
+        dmm_pyr = multimeter_pyr.get()
+        Vms_pyr = dmm_pyr["events"]["V_m"] 
+
+        spike_trains_pyr = [times[senders == neuron_id] for neuron_id in pyr]
+        spike_trains_pyr = simulation_results_to_spike_trains(spike_trains_pyr, self.runtime)
+        self.spike_timings_pyr = spike_trains_pyr
+        self.voltage_traces_pyr = tidy_Vms(Vms_pyr, self.num_pyr)
+        self.spike_recorder_pyr = spike_recorder_pyr
+
     def set_connection_weights(self, pyr, input1, input2, input3, input4, input5):
+
+        pyr_pyr_conns = self.weights[0:5, 0:5]
+        connect_weights(pyr, pyr, pyr_pyr_conns, self.G_e, self.V_e)
+
+        input1_pyr1_cons = self.weights[5][0]
+        connect_weights(input1, pyr[0], input1_pyr1_cons, self.G_e, self.V_e)
+
+        input2_pyr2_cons = self.weights[6][1]
+        connect_weights(input2, pyr[1], input2_pyr2_cons, self.G_e, self.V_e)
+
+        input3_pyr3_cons = self.weights[7][2]
+        connect_weights(input3, pyr[2], input3_pyr3_cons, self.G_e, self.V_e)
+    
+        input4_pyr4_cons = self.weights[8][3]
+        connect_weights(input4, pyr[3], input4_pyr4_cons, self.G_e, self.V_e)
+
+        input5_pyr5_cons = self.weights[9][4]
+        connect_weights(input5, pyr[4], input5_pyr5_cons, self.G_e, self.V_e)
 
     def initialize_connectivity_matrix_normal_distribution(self):
 
@@ -278,12 +329,17 @@ class Model2(Model):
         for i in range(5):
             #Pyramidal to Pyramidal
             matrix[i][0:5] = np.abs(np.random.normal(1, scale=0.4, size=5))
+
         
         matrix[5][0] = np.abs(np.random.normal(1, scale=0.4, size=1))
         matrix[6][1] = np.abs(np.random.normal(1, scale=0.4, size=1))
         matrix[7][2] = np.abs(np.random.normal(1, scale=0.4, size=1))
         matrix[8][3] = np.abs(np.random.normal(1, scale=0.4, size=1))
         matrix[9][4] = np.abs(np.random.normal(1, scale=0.4, size=1))
+
+        for i in range(10):
+            matrix[i][i] = 0
+
 
         return matrix
 
