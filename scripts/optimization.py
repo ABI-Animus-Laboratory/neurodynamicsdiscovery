@@ -17,7 +17,7 @@ class SimulatedAnnealing1(Annealer):
         network.simulate()
         place_pred = network.get_voltage_traces('Place')
         int_pred = network.get_voltage_traces('Inter')
-        cost_function = ssd_with_l1_with_int(self.place_obs, place_pred, self.int_obs, int_pred, self.lamb, self.state)
+        cost_function = self.ssd_with_l1_with_int(place_pred, int_pred)
         return cost_function
     
     def move(self):
@@ -27,6 +27,15 @@ class SimulatedAnnealing1(Annealer):
             if self.state[x][y] != 0:
                 self.state[x][y] = min(max(self.state[x][y] + np.random.uniform(-0.2, 0.2), 0.01), 3)    
 
+    def ssd_with_l1_with_int(self, place_pred, int_pred):
+        '''
+        Sum of squared differences with lasso regularization cost function between two same-shape 2d numpy arrays, with interneurons
+        '''
+
+        sum_squared_difference = np.sum(0.5 * (place_pred - self.place_obs) ** 2) + np.sum(0.5 * (int_pred - self.int_obs) ** 2)
+        l1_penalty = np.sum(self.lamb * np.abs(self.weights))
+        return sum_squared_difference + l1_penalty
+
 class SimulatedAnnealing2(Annealer):
     def __init__(self, weights, place_obs, lamb, categorized_neurons, spike_weights):
         self.state = weights, spike_weights
@@ -35,21 +44,19 @@ class SimulatedAnnealing2(Annealer):
         self.lamb = lamb
 
     def energy(self):
-        #Change this later
         network = model.Model2(self.categorized_neurons, self.state[1], self.state[0])
         network.simulate()
         place_pred = network.get_voltage_traces('Place')
-        cost_function = ssd_with_l1(self.place_obs, place_pred, self.lamb, self.state[0])
+        cost_function = self.ssd_with_l1(place_pred)
         return cost_function
     
     def move(self):
 
         weights, spike_weights = self.state
-        for i in range(3000):
-            x = np.random.randint(0, np.shape(weights)[1])
-            y = np.random.randint(0, np.shape(weights)[0])
-            if weights[x][y] != 0:
-                weights[x][y] = min(max(weights[x][y] + np.random.uniform(-0.2, 0.2), 0.01), 3)    
+        for i in range(10):
+            x = np.random.randint(0, 5)
+            y = np.random.randint(0, 5)
+            weights[x][y] = min(max(weights[x][y] + np.random.uniform(-0.2, 0.2), 0.01), 3)    
         
         for i in range(np.size(spike_weights, axis=0)):
             for j in range(np.size(spike_weights, axis=1)):
@@ -58,24 +65,16 @@ class SimulatedAnnealing2(Annealer):
 
         self.state = weights, spike_weights 
 
-        
-def ssd_with_l1_with_int(place_obs, place_pred, int_obs, int_pred, lamb, weights):
-    '''
-    Sum of squared differences with lasso regularization cost function between two same-shape 2d numpy arrays, with interneurons
-    '''
+    def ssd_with_l1(self, place_pred):
+        '''
+        Sum of squared differences with lasso regularization cost function between two same-shape 2d numpy arrays
+        '''
+        sum_squared_difference = np.sum(0.5 * (place_pred - self.place_obs) ** 2)
+        l1_penalty = np.sum(self.lamb * np.abs(self.state[0]))
+        return sum_squared_difference + l1_penalty
 
-    sum_squared_difference = np.sum(0.5 * (place_pred - place_obs) ** 2) + np.sum(0.5 * (int_pred - int_obs) ** 2)
-    l1_penalty = np.sum(lamb * np.abs(weights))
-    return sum_squared_difference + l1_penalty
 
-def ssd_with_l1(place_obs, place_pred, lamb, weights):
-    '''
-    Sum of squared differences with lasso regularization cost function between two same-shape 2d numpy arrays
-    '''
-
-    sum_squared_difference = np.sum(0.5 * (place_pred - place_obs) ** 2)
-    l1_penalty = np.sum(lamb * np.abs(weights))
-    return sum_squared_difference + l1_penalty
+    
 
 
     

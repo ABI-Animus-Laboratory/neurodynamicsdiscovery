@@ -329,13 +329,7 @@ class Model2(Model):
         for i in range(5):
             #Pyramidal to Pyramidal
             matrix[i][0:5] = np.abs(np.random.normal(1, scale=0.4, size=5))
-
-        
-        matrix[5][0] = np.abs(np.random.normal(1, scale=0.4, size=1))
-        matrix[6][1] = np.abs(np.random.normal(1, scale=0.4, size=1))
-        matrix[7][2] = np.abs(np.random.normal(1, scale=0.4, size=1))
-        matrix[8][3] = np.abs(np.random.normal(1, scale=0.4, size=1))
-        matrix[9][4] = np.abs(np.random.normal(1, scale=0.4, size=1))
+            matrix(i + 5)[i] = 1
 
         for i in range(10):
             matrix[i][i] = 0
