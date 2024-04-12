@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import nest
-from scripts import optimization
 from params import pyr_hcamp_deco2012, int_hcamp_deco2012
 
 class Model:
@@ -24,15 +23,9 @@ class Model:
         self.num_pyr = len(categorized_neurons['Place'])
         
         self.spike_timings_pyr = None
-        self.spike_trains_inter = None
-
         self.voltage_traces_pyr = None
-        self.voltage_traces_int = None
-
         self.spike_recorder_pyr = None
-        self.spike_recorder_int = None
-
-
+        
     def check_simulated(self):
         '''
         Checks if a simulation has been run
@@ -40,54 +33,18 @@ class Model:
         '''
 
         return self.simulated
-
-    def get_spike_trains(self, category):
-        '''
-        Gets the spike trains for each neuron in a specific category produced by the simulation
-        Takes in a category paramater and returns a 2d numpy array
-        '''
-        if self.simulated:
-            if category == 'Place':
-                return self.spike_timings_pyr
-            elif category == 'Inter':
-                return self.spike_trains_inter
-            else:
-                print('Not a valid category!')
-                return None
-    
-    def get_voltage_traces(self, category):
-        '''
-        Gets the voltage traces for each neuron in a specific category produced by the simulation
-        Takes in a category paramater and returns a 2d numpy array
-        '''
-        if self.simulated:
-            if category == 'Place':
-                return self.voltage_traces_pyr
-            elif category == 'Inter':
-                return self.voltage_traces_int
-            else:
-                print('Not a valid category!')
-                return None
         
-    def show_raster(self):
-        '''
-        Displays two raster plots for place cells and interneurons based on the spike trains obtained from the simulation
-        Takes in no paramters and returns nothing
-        '''
-        if self.simulated:
-            nest.raster_plot.from_device(self.spike_recorder_pyr)
-            nest.raster_plot.from_device(self.spike_recorder_int)
-        else:
-            print("No simulation has been run!")
-
 class Model1(Model):
+
     def __init__(self, categorized_neurons, weights = None, G_e = 3.7, G_i = -1, runtime = 17988, gamma_rate = 40, theta_rate = 7):
-        
 
         super().__init__(categorized_neurons, G_e, G_i, runtime, gamma_rate, theta_rate)
 
+        self.spike_trains_int = None
+        self.voltage_traces_int = None
+        self.spike_recorder_int = None
+
         self.num_int = len(categorized_neurons['Interneuron'])
-        self.num_ca1_neurons = self.num_pyr + self.num_int
         if weights is None:
             self.weights = self.initialize_connectivity_matrix_normal_distribution()
         else:
@@ -171,6 +128,34 @@ class Model1(Model):
         self.voltage_traces_int = tidy_Vms(Vms_int, self.num_int)
         self.spike_recorder_int = spike_recorder_inter
 
+    def get_spike_trains(self, category):
+        '''
+        Gets the spike trains for each neuron in a specific category produced by the simulation
+        Takes in a category paramater and returns a 2d numpy array
+        '''
+        if self.simulated:
+            if category == 'Place':
+                return self.spike_timings_pyr
+            elif category == 'Inter':
+                return self.spike_trains_int
+            else:
+                print('Not a valid category!')
+                return None
+    
+    def get_voltage_traces(self, category):
+        '''
+        Gets the voltage traces for each neuron in a specific category produced by the simulation
+        Takes in a category paramater and returns a 2d numpy array
+        '''
+        if self.simulated:
+            if category == 'Place':
+                return self.voltage_traces_pyr
+            elif category == 'Inter':
+                return self.voltage_traces_int
+            else:
+                print('Not a valid category!')
+                return None
+
     def initialize_connectivity_matrix_normal_distribution(self):
         '''
         order and quantities
@@ -250,11 +235,11 @@ class Model1(Model):
         connect_weights(ms, inter, ms_inter_conns, G_i, V_i)
 
 class Model2(Model):
+    
     def __init__(self, categorized_neurons, spike_weights = None, weights = None, G_e = 3.7, G_i = -1, runtime = 3000, gamma_rate = 40, theta_rate = 7):
         super().__init__(categorized_neurons, G_e, G_i, runtime, gamma_rate, theta_rate)
-        self.spike_weights = spike_weights
 
-        self.num_ca1_neurons = self.num_pyr
+        self.spike_weights = spike_weights
 
         if spike_weights is None:
             self.spike_weights = np.ones((5, self.runtime))
@@ -322,6 +307,32 @@ class Model2(Model):
         input5_pyr5_cons = self.weights[9][4]
         connect_weights(input5, pyr[4], input5_pyr5_cons, self.G_e, self.V_e)
 
+    def get_spike_trains(self):
+        '''
+        Gets the spike trains for each neuron 
+        Takes in a category paramater and returns a 2d numpy array
+        '''
+        if self.simulated:
+            return self.spike_trains_pyr
+    
+    def get_voltage_traces(self):
+        '''
+        Gets the voltage traces for each neuron 
+        Takes in a category paramater and returns a 2d numpy array
+        '''
+        if self.simulated:
+            return self.voltage_traces_pyr
+
+    def show_raster(self):
+        '''
+        Displays two raster plots for place cells based on the spike trains obtained from the simulation
+        Takes in no paramters and returns nothing
+        '''
+        if self.simulated:
+            nest.raster_plot.from_device(self.spike_recorder_pyr)
+        else:
+            print("No simulation has been run!")
+
     def initialize_connectivity_matrix_normal_distribution(self):
 
         matrix = np.zeros((10, 10))
@@ -333,7 +344,6 @@ class Model2(Model):
 
         for i in range(10):
             matrix[i][i] = 0
-
 
         return matrix
 
