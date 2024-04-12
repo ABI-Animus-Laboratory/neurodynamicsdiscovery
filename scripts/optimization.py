@@ -4,12 +4,23 @@ from scripts import model
 from simanneal import Annealer
 
 class SimulatedAnnealing1(Annealer):
-    def __init__(self, state, place_obs, int_obs, lamb, categorized_neurons):
+    def __init__(self, state, place_obs, int_obs, lamb, categorized_neurons, move_params = None):
         self.categorized_neurons = categorized_neurons
         self.place_obs = place_obs
         self.int_obs = int_obs
         self.lamb = lamb
         self.state = state
+        if move_params is None:
+            #Default move params
+            self.move_params = {
+                'num_weights': 3000,
+                'weights_min': 0.01,
+                'weights_max' : 3,
+                'weights_change_min' : -0.2,
+                'weights_change_max' : 0.2,
+            }
+        else:
+            self,move_params = move_params
 
     def energy(self):
         #Change this later
@@ -17,17 +28,20 @@ class SimulatedAnnealing1(Annealer):
         network.simulate()
         place_pred = network.get_voltage_traces('Place')
         int_pred = network.get_voltage_traces('Inter')
-        cost_function = self.ssd_with_l1_with_int(place_pred, int_pred)
+        cost_function = self.ssd_with_l1(place_pred, int_pred)
         return cost_function
     
     def move(self):
-        for i in range(3000):
+        for i in range(self.move_params['num_weights']):
             x = np.random.randint(0, np.shape(self.state)[1])
             y = np.random.randint(0, np.shape(self.state)[0])
             if self.state[x][y] != 0:
-                self.state[x][y] = min(max(self.state[x][y] + np.random.uniform(-0.2, 0.2), 0.01), 3)    
+                self.state[x][y] = min(max(self.state[x][y] + np.random.uniform(self.move_params['weights_change_min'], 
+                                                                                self.move_params['weights_change_max']), 
+                                                                                self.move_params['weights_min']), 
+                                                                                self.move_params['weights_max'])    
 
-    def ssd_with_l1_with_int(self, place_pred, int_pred):
+    def ssd_with_l1(self, place_pred, int_pred):
         '''
         Sum of squared differences with lasso regularization cost function between two same-shape 2d numpy arrays, with interneurons
         '''
@@ -37,31 +51,53 @@ class SimulatedAnnealing1(Annealer):
         return sum_squared_difference + l1_penalty
 
 class SimulatedAnnealing2(Annealer):
-    def __init__(self, weights, place_obs, lamb, categorized_neurons, spike_weights):
+
+    def __init__(self, weights, place_obs, lamb, categorized_neurons, spike_weights, move_params = None):
+        
         self.state = weights, spike_weights
         self.categorized_neurons = categorized_neurons
         self.place_obs = place_obs
         self.lamb = lamb
+        if move_params is None:
+            #Default move params
+            self.move_params = {
+                'weights_min': 0.01,
+                'weights_max' : 3,
+                'weights_change_min' : -0.2,
+                'weights_change_max' : 0.2,
+                'spike_weights_min': -3,
+                'spike_weights_max' : 3,
+                'spike_weights_change_min' : -0.2,
+                'spike_weights_change_max' : 0.2,
+                'spike_weights_prob' : 0.2
+            }
+        else:
+            self,move_params = move_params
+        
 
     def energy(self):
         network = model.Model2(self.categorized_neurons, self.state[1], self.state[0])
         network.simulate()
-        place_pred = network.get_voltage_traces('Place')
+        place_pred = network.get_voltage_traces()
         cost_function = self.ssd_with_l1(place_pred)
         return cost_function
     
     def move(self):
 
         weights, spike_weights = self.state
-        for i in range(10):
-            x = np.random.randint(0, 5)
-            y = np.random.randint(0, 5)
-            weights[x][y] = min(max(weights[x][y] + np.random.uniform(-0.2, 0.2), 0.01), 3)    
+
+        for i in range(np.size(weights, axis=0)):
+            for j in range(np.size(weights, axis=1)):
+                weights[i][j] = min(max(weights[i][j] + np.random.uniform(self.move_params['weights_change_min'],
+                                                                          self.move_params['weights_change_max']), 
+                                                                          self.move_params['weights_min']), self.move_params['weights_max'])    
         
         for i in range(np.size(spike_weights, axis=0)):
             for j in range(np.size(spike_weights, axis=1)):
-                if np.random.rand(1) > 0.8 and spike_weights[i][j] != 0:
-                    spike_weights[i][j] = min(max(spike_weights[i][j] + np.random.uniform(-0.2, 0.2), -5), 5)   
+                if np.random.rand(1) < self.move_params['spike_weights_prob']:
+                    spike_weights[i][j] = min(max(spike_weights[i][j] + np.random.uniform(self.move_params['spike_weights_change_min'],
+                                                                            self.move_params['spike_weights_change_max']), 
+                                                                            self.move_params['spike_weights_min']), self.move_params['spike_weights_max']) 
 
         self.state = weights, spike_weights 
 

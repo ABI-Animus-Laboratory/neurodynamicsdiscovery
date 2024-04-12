@@ -235,7 +235,7 @@ class Model1(Model):
         connect_weights(ms, inter, ms_inter_conns, G_i, V_i)
 
 class Model2(Model):
-    
+
     def __init__(self, categorized_neurons, spike_weights = None, weights = None, G_e = 3.7, G_i = -1, runtime = 3000, gamma_rate = 40, theta_rate = 7):
         super().__init__(categorized_neurons, G_e, G_i, runtime, gamma_rate, theta_rate)
 
@@ -253,6 +253,7 @@ class Model2(Model):
 
     def simulate(self):
         nest.ResetKernel()
+
         pyr = initialize_neuron_group('iaf_psc_alpha', 5, pyr_hcamp_deco2012.params)
 
         spike_times = [t for t in range(1, self.runtime+1)]
@@ -359,6 +360,7 @@ def tidy_Vms(Vms, num_neurons):
         voltage_trace = []
         for j in range(i, len(Vms), num_neurons):
             voltage_trace.append(Vms[j])
+
         voltage_traces.append(voltage_trace)
 
     return np.array(voltage_traces)
