@@ -55,6 +55,7 @@ class Model1(Model):
         Runs a simulation and assigns class variables 
         Takes in no inputs and has no output
         '''
+
         nest.ResetKernel()
         
         #Initialization of pyramimdal and interneurons
@@ -98,7 +99,8 @@ class Model1(Model):
         self.set_connection_weights(pyr, ec_parrot, ca3_parrot, inter, ms_parrot, self.weights, self.G_e, self.G_i, self.V_e, self.V_i,
                                self.num_pyr, self.num_int)
 
-        #Run simulation
+        nest.resolution = self.resolution
+        
         nest.Simulate(self.runtime)
 
         self.simulated = True
@@ -272,6 +274,9 @@ class Model2(Model):
         nest.Connect(multimeter_pyr, pyr)
 
         self.set_connection_weights(pyr, input1, input2, input3, input4, input5)
+
+        nest.resolution = self.resolution
+
         nest.Simulate(self.runtime)
 
         self.simulated = True
@@ -341,7 +346,7 @@ class Model2(Model):
         for i in range(5):
             #Pyramidal to Pyramidal
             matrix[i][0:5] = np.abs(np.random.normal(1, scale=0.4, size=5))
-            matrix(i + 5)[i] = 1
+            matrix[i + 5][i] = 1
 
         for i in range(10):
             matrix[i][i] = 0
