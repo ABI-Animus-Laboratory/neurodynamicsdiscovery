@@ -15,7 +15,7 @@ class Model:
         self.gamma_rate = gamma_rate
         self.theta_rate = theta_rate
 
-        self.resolution = 1
+        self.resolution = 0.1
         self.V_e = 5
         self.V_i = 5
         self.simulated = False             
@@ -57,6 +57,8 @@ class Model1(Model):
         '''
 
         nest.ResetKernel()
+
+        nest.resolution = self.resolution
         
         #Initialization of pyramimdal and interneurons
         pyr = initialize_neuron_group('iaf_psc_alpha', self.num_pyr, pyr_hcamp_deco2012.params)
@@ -99,8 +101,7 @@ class Model1(Model):
         self.set_connection_weights(pyr, ec_parrot, ca3_parrot, inter, ms_parrot, self.weights, self.G_e, self.G_i, self.V_e, self.V_i,
                                self.num_pyr, self.num_int)
 
-        nest.resolution = self.resolution
-        
+
         nest.Simulate(self.runtime)
 
         self.simulated = True
@@ -256,6 +257,8 @@ class Model2(Model):
     def simulate(self):
         nest.ResetKernel()
 
+        nest.resolution = self.resolution
+
         pyr = initialize_neuron_group('iaf_psc_alpha', 5, pyr_hcamp_deco2012.params)
 
         spike_times = [t for t in range(1, self.runtime+1)]
@@ -275,8 +278,6 @@ class Model2(Model):
 
         self.set_connection_weights(pyr, input1, input2, input3, input4, input5)
 
-        nest.resolution = self.resolution
-
         nest.Simulate(self.runtime)
 
         self.simulated = True
@@ -286,6 +287,7 @@ class Model2(Model):
         times = spikes_pyr["times"]
         dmm_pyr = multimeter_pyr.get()
         Vms_pyr = dmm_pyr["events"]["V_m"] 
+
 
         spike_trains_pyr = [times[senders == neuron_id] for neuron_id in pyr]
         spike_trains_pyr = simulation_results_to_spike_trains(spike_trains_pyr, self.runtime)

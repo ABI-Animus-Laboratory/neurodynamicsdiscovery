@@ -1,5 +1,5 @@
 #https://hippocampome.org/php/neuron_page.php?id=4000
-#https://www.jneurosci.org/content/32/10/3366?ijkey=214bab14703c98a27c572070390b1fff82a578c3&keytype2=tf_ipsecsha
+#https://www.jneurosci.org/content/32/10/3366?ijkey=214bab14703c98a27c72070390b1fff82a578c3&keytype2=tf_ipsecsha5
 
 params = {
     'E_L': -70, 
