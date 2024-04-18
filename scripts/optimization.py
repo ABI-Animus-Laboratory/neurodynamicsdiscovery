@@ -2,12 +2,13 @@ import numpy as np
 import nest
 import itertools
 import os
-import shutil
+import datetime
 import math
 import copy
 import time
 import pickle
 import random
+import pandas as pd
 import matplotlib.pyplot as plt
 from scripts import model
 from simanneal import Annealer
@@ -172,13 +173,9 @@ class SimulatedAnnealing1(Annealer):
 
 class SimulatedAnnealing2(Annealer):
 
-    def __init__(self, weights, place_obs, lamb, categorized_neurons, spike_weights, move_params = None):
-        
-        self.state = weights, spike_weights
-
+    def __init__(self, weights, place_obs, lamb, categorized_neurons, input_weights, move_params = None):
         self.objs = []
         self.best_objs = []
-
         self.categorized_neurons = categorized_neurons
         self.place_obs = place_obs
         self.lamb = lamb
@@ -190,19 +187,20 @@ class SimulatedAnnealing2(Annealer):
             self.move_params = {
                 'weights_range': (-5, 5),
                 'weights_change_range': (-0.2, 0.2),
-                'spike_weights_range': (-5, 5),
-                'spike_weights_change_range': (-2, 2),
-                'spike_weights_prob' : 0.2,
-                'optimise_spike_weights': False
+                'input_weights_range': (-5, 5),
+                'input_weights_change_range': (-2, 2),
+                'input_weights_prob' : 0.2,
+                'optimise_input_weights': False
             }
         else:
             self.move_params = move_params
 
         self.voltage_traces = None
-        
+
+        self.state = weights, input_weights
 
     def energy(self):
-        network = model.Model2(self.categorized_neurons, self.state[1], self.state[0])
+        network = model.Model2(self.categorized_neurons, self.state[0], self.state[1])
         network.simulate()
         place_pred = network.get_voltage_traces()
         cost_function = self.ssd_with_l1(place_pred)
@@ -293,23 +291,25 @@ class SimulatedAnnealing2(Annealer):
 
     def move(self):
 
-        weights, spike_weights = self.state
+        weights, input_weights = self.state
 
         for i in range(5):
             for j in range(5):
                 if weights[i][j] != 0:
                     weights[i][j] = min(max(weights[i][j] + np.random.uniform(self.move_params['weights_change_range'][0],
                                                                             self.move_params['weights_change_range'][1]), 
-                                                                            self.move_params['weights_range'][0]), self.move_params['weights_range'][1])    
-        if self.move_params['optimise_spike_weights']:
-            for i in range(np.size(spike_weights, axis=0)):
-                for j in range(np.size(spike_weights, axis=1)):
-                    if np.random.rand(1) < self.move_params['spike_weights_prob']:
-                        spike_weights[i][j] = min(max(spike_weights[i][j] + np.random.uniform(self.move_params['spike_weights_change_range'][0],
-                                                                                self.move_params['spike_weights_change_range'][1]), 
-                                                                                self.move_params['spike_weights_range'][0]), self.move_params['spike_weights_range'][1]) 
+                                                                         self.move_params['weights_range'][0]), self.move_params['weights_range'][1])    
+                    
+        #Need to modify this later so its more efficient
+        if self.move_params['optimise_input_weights']:
+            for i in range(np.size(input_weights, axis=0)):
+                for j in range(np.size(input_weights, axis=1)):
+                    if np.random.rand(1) < self.move_params['input_weights_prob']:
+                        input_weights[i][j] = min(max(input_weights[i][j] + np.random.uniform(self.move_params['input_weights_change_range'][0],
+                                                                                self.move_params['input_weights_change_range'][1]), 
+                                                                                self.move_params['input_weights_range'][0]), self.move_params['input_weights_range'][1]) 
 
-        self.state = weights, spike_weights 
+        self.state = weights, input_weights 
 
     def plot_objs(self):
         plt.figure(figsize=(15, 5))
@@ -338,52 +338,120 @@ class SimulatedAnnealing2(Annealer):
 
 
 class SensitivityAnalysis:
-    def __init__(self, move_param_ranges, optimiser, save_results = False):
+    def __init__(self, move_param_ranges, optimiser, param_keys, num_iters = 3, save_results = False):
         self.move_param_ranges = move_param_ranges
         self.optimiser = optimiser
         self.save_results = save_results
+        self.param_keys = param_keys
+        self.num_iters = num_iters
     
     def generate_param_permutations(self):
         permutations = itertools.product(*(self.move_param_ranges[param] for param in self.move_param_ranges))
         param_perms = [dict(zip(self.move_param_ranges.keys(), permutation)) for permutation in permutations]
         return param_perms
-                
+    
+    def create_experiment_dir(self):
+
+        current_datetime = str(datetime.datetime.now())[:-7]
+        results_dir = '/hpc/mzhu843/modelling/nest/notebooks/optimization/simulated_annealing/model2/sensitivity_analysis results/'
+        experiment_dir = results_dir + current_datetime
+        if not os.path.exists(experiment_dir):
+            os.makedirs(experiment_dir)
+        return experiment_dir + '/'
+
     def run_analysis(self):
+
         param_perms = self.generate_param_permutations()
-        if isinstance(self.optimiser, Annealer):
-            for i in range(len(param_perms)):
+        param_metrics = []
+
+        if self.save_results:
+            experiment_dir = self.create_experiment_dir()
+
+        start = time.time()
+
+        for i in range(len(param_perms)):
+
+            param_perm_subset = {key: param_perms[i][key] for key in self.param_keys if key in param_perms[i]}
+
+            if self.save_results:
+                perm_dir = experiment_dir + str(param_perm_subset) + '/'
+                if not os.path.exists(perm_dir):
+                    os.makedirs(perm_dir)
+            
+            if isinstance(self.optimiser, Annealer):
                 self.optimiser.move_params = param_perms[i]
 
-                results = []
-                for run in range(3):
+                best_objs = []
+                objs = []
+                optimized_weights = []
+                
+                for run in range(self.num_iters):
                     temp_optimiser = copy.deepcopy(self.optimiser)
-                    x, func = temp_optimiser.anneal()
-                    results.append(temp_optimiser.best_energy)
+                    x = temp_optimiser.anneal()[0]
+                    best_objs.append(temp_optimiser.best_energy)
+                    objs.append(temp_optimiser.objs)
+                    flattened_objs = [x for sublist in objs for x in sublist]
+                    optimized_weights.append(x)
                     temp_optimiser.plot_objs()
 
-                if self.save_results:
-                    results_dir = '/hpc/mzhu843/modelling/nest/notebooks/optimization/simulated_annealing/model2/sensitivity_analysis results/'
-                    perm_dir = '/hpc/mzhu843/modelling/nest/notebooks/optimization/simulated_annealing/model2/sensitivity_analysis results/' + str(i + 1) + '/'
-                    if not os.path.exists(perm_dir):
-                        os.makedirs(perm_dir)
-                    else:
-                        shutil.rmtree(perm_dir)         
-                        os.makedirs(perm_dir)
+                    if self.save_results:
+                        plt.savefig(perm_dir + f'Run {run+1} Objective Functions.png')
+                        plt.close()
 
-                    
-                    plt.savefig(perm_dir + 'Objective Functions '  + str(i+1) + '.png')
-                    plt.close()
+                param_metrics.append((param_perm_subset, best_objs[0], best_objs[1], best_objs[2], sum(best_objs)/len(best_objs), 
+                                           sum(objs[0]) / len(objs[0]), sum(objs[1]) / len(objs[1]), sum(objs[2]) / len(objs[2]), sum(flattened_objs) / len(flattened_objs)))
+
+                if self.save_results:
+
+                    np.save(perm_dir + 'Run 1 Optimized Weights', optimized_weights[0][0])
+                    np.save(perm_dir + 'Run 2 Optimized Weights', optimized_weights[1][0])
+                    np.save(perm_dir + 'Run 3 Optimized Weights', optimized_weights[2][0])
 
                     with open(perm_dir + 'params.pkl', 'wb') as file:
                         pickle.dump(param_perms[i], file)
 
-                    with open(perm_dir + 'data.txt', 'w') as data:
-                        data.write('Parameters: ' + str(param_perms[i]) + '\n')
-                        data.write('\n')
-                        data.write('Run 1 Best Energy: ' + str(results[0]) + '\n')
-                        data.write('Run 2 Best Energy: ' + str(results[1]) + '\n')
-                        data.write('Run 3 Best Energy: ' + str(results[2]) + '\n')
-                        data.write('\n')
+        if self.save_results:
+
+            param_metrics = sorted(param_metrics, key=lambda x: x[4])
+
+            end = time.time()
+            duration = end - start
+            df_cols = ['Parameters', 'Best Obj 1', 'Best Obj 2', 'Best Obj 3', 'Mean Best Obj', 'Mean Obj 1', 'Mean Obj 2', 'Mean Obj 3', 'Mean Mean Obj']
+            df = pd.DataFrame(param_metrics, columns = df_cols)
+            df.to_csv(experiment_dir + 'summary_stats.csv')
+            np.save(experiment_dir + 'weights', self.optimiser.state[0])
+            np.save(experiment_dir + 'spike weights', self.optimiser.state[1])
+            weights_statistics = get_2d_statistics(self.optimiser.state[0])
+            input_weights_statistics = get_2d_statistics(self.optimiser.state[1])
+
+            with open(experiment_dir + 'details.txt', 'w') as file:
+                file.write(f'Duration: {duration} seconds\n')
+                file.write(f'Number of Iterations Per Experiment: {self.num_iters}\n')
+                file.write(f'Number of Optimisation Steps: {self.optimiser.steps}\n\n')
+                file.write(f'PARAMETER RANGES\n')
+                for param_range in self.move_param_ranges.keys():
+                    file.write(f'{param_range}: {self.move_param_ranges[param_range]}\n') 
+                for statistic in weights_statistics.keys():
+                    file.write(f'{statistic}: {weights_statistics[statistic]}\n') 
+                for statistic in input_weights_statistics.keys():
+                    file.write(f'{statistic}: {input_weights_statistics[statistic]}\n') 
+        
+        return param_metrics
+
+def get_2d_statistics(twod_array):
+    
+    statistics_dict = {}
+
+    statistics_dict['mean'] = np.mean(twod_array)
+    statistics_dict['median'] = np.median(twod_array)
+    statistics_dict['std'] = np.std(twod_array)
+    statistics_dict['min'] = np.min(twod_array)
+    statistics_dict['max'] = np.max(twod_array)
+
+    return statistics_dict
+
+
+
                         
 
 

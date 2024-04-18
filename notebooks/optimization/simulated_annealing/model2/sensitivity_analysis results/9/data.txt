@@ -1,4 +1,0 @@
-Parameters: {'weights_range': (-3, 3), 'weights_change_range': (-0.1, 0.1), 'spike_weights_range': (-5, 5), 'spike_weights_change_range': (-2, 2), 'spike_weights_prob': 0.2, 'optimise_spike_weights': False}
-Run 1 Best Energy: 79746.56755645412
-Run 2 Best Energy: 76450.45333248345
-Run 3 Best Energy: 77006.54484288036

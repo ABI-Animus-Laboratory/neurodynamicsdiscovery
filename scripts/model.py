@@ -239,15 +239,14 @@ class Model1(Model):
 
 class Model2(Model):
 
-    def __init__(self, categorized_neurons, spike_weights = None, weights = None, G_e = 3.7, G_i = -1, runtime = 3000, gamma_rate = 40, theta_rate = 7):
+    def __init__(self, categorized_neurons, weights = None, input_weights = None, G_e = 3.7, G_i = -1, runtime = 3000, gamma_rate = 40, theta_rate = 7):
         super().__init__(categorized_neurons, G_e, G_i, runtime, gamma_rate, theta_rate)
 
-        self.spike_weights = spike_weights
-
-        if spike_weights is None:
-            self.spike_weights = np.ones((5, self.runtime))
+        self.input_weights = input_weights
+        if input_weights is None:
+            self.input_weights = np.ones((5, self.runtime))
         else:
-            self.spike_weights = spike_weights
+            self.input_weights = input_weights
 
         if weights is None:
             self.weights = self.initialize_connectivity_matrix_normal_distribution()
@@ -263,11 +262,11 @@ class Model2(Model):
 
         spike_times = [t for t in range(1, self.runtime+1)]
 
-        input1 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.spike_weights[0]}, n=1)
-        input2 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.spike_weights[1]}, n=1)
-        input3 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.spike_weights[2]}, n=1)
-        input4 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.spike_weights[3]}, n=1)
-        input5 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.spike_weights[4]}, n=1)
+        input1 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.input_weights[0]}, n=1)
+        input2 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.input_weights[1]}, n=1)
+        input3 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.input_weights[2]}, n=1)
+        input4 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.input_weights[3]}, n=1)
+        input5 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.input_weights[4]}, n=1)
 
         spike_recorder_pyr = nest.Create('spike_recorder')
         nest.Connect(pyr, spike_recorder_pyr)
