@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import nest
+import time 
 from params import pyr_hcamp_deco2012, int_hcamp_deco2012
 
 class Model:
@@ -252,8 +253,13 @@ class Model2(Model):
             self.weights = self.initialize_connectivity_matrix_normal_distribution()
         else:
             self.weights = weights
+        
+        #delete
+        self.temp = time.perf_counter() - time.perf_counter()
 
     def simulate(self):
+
+        start = time.time()
         nest.ResetKernel()
 
         nest.resolution = self.resolution
@@ -268,6 +274,7 @@ class Model2(Model):
         input4 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.input_weights[3]}, n=1)
         input5 = nest.Create("spike_generator", params={"spike_times": spike_times, "spike_weights": self.input_weights[4]}, n=1)
 
+
         spike_recorder_pyr = nest.Create('spike_recorder')
         nest.Connect(pyr, spike_recorder_pyr)
         multimeter_pyr = nest.Create('multimeter')
@@ -276,6 +283,7 @@ class Model2(Model):
         nest.Connect(multimeter_pyr, pyr)
 
         self.set_connection_weights(pyr, input1, input2, input3, input4, input5)
+
 
         nest.Simulate(self.runtime)
 
@@ -293,6 +301,9 @@ class Model2(Model):
         self.spike_timings_pyr = spike_trains_pyr
         self.voltage_traces_pyr = tidy_Vms(Vms_pyr, self.num_pyr)
         self.spike_recorder_pyr = spike_recorder_pyr
+
+        end = time.time()
+        self.temp += (end - start)
 
     def set_connection_weights(self, pyr, input1, input2, input3, input4, input5):
 
@@ -393,6 +404,17 @@ def connect_weights(A, B, W, G, V):
     Connects all neurons in groups A and B according to weight matrix W with global scaling of G and voltage of V
     '''
     nest.Connect(A, B, 'all_to_all', syn_spec={'weight': np.transpose(W) * G * V})
+
+def initialize_neuron_group(type, n=1, params={}):
+    neurons = nest.Create(type, n=n, params=params)
+    if n>1:
+        Vth = neurons.get('V_th')[0]
+        Vreset = neurons.get('V_reset')[0]
+    else:
+        Vth = neurons.get('V_th')
+        Vreset = neurons.get('V_reset')
+    neurons.set({"V_m": Vreset})
+    return neurons
 
 def initialize_neuron_group(type, n=1, params={}):
     neurons = nest.Create(type, n=n, params=params)
